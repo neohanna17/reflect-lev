@@ -48,6 +48,11 @@ jobs:
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
           # Failure alerts → Discord (optional; no-op if the secret is unset).
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          # Login credentials for lev.charity. Referenced in test steps as the
+          # tokens {{LEV_TEST_EMAIL}} / {{LEV_TEST_PASSWORD}}; substituted only
+          # at type-time so the real values never touch Firestore or the logs.
+          LEV_TEST_EMAIL: ${{ secrets.LEV_TEST_EMAIL }}
+          LEV_TEST_PASSWORD: ${{ secrets.LEV_TEST_PASSWORD }}
           DASHBOARD_URL: https://lev-charity.netlify.app
           # repository_dispatch payload > manual input > empty (drain queue)
           RUN_ID: ${{ github.event.client_payload.run_id || github.event.inputs.run_id }}

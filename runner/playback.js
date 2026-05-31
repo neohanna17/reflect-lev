@@ -5,6 +5,16 @@
 const DEFAULT_TIMEOUT = 8000;
 const SELECTOR_TIMEOUT = 4000;
 
+// Replace {{ENV_VAR}} tokens with values from the runner environment. Called
+// only at the instant a value is typed into the page — never on the stored step
+// or its label — so credentials stay out of Firestore, logs, and the UI.
+function injectSecrets(value) {
+  if (typeof value !== 'string') return value;
+  return value.replace(/\{\{\s*([A-Z0-9_]+)\s*\}\}/g, (m, name) =>
+    process.env[name] != null ? process.env[name] : m,
+  );
+}
+
 function stepLabel(step) {
   const t = step.target?.label || (step.selectors && step.selectors[0]) || 'element';
   switch (step.type) {
@@ -78,8 +88,8 @@ async function execStep(page, step, result) {
       const { locator, selector, index } = await resolve(page, step.selectors);
       if (index > 0) result.healedWith = selector;
       if (step.type === 'click') await locator.click({ timeout: DEFAULT_TIMEOUT });
-      else if (step.type === 'type') await locator.fill(step.value ?? '', { timeout: DEFAULT_TIMEOUT });
-      else if (step.type === 'select') await locator.selectOption(step.value, { timeout: DEFAULT_TIMEOUT });
+      else if (step.type === 'type') await locator.fill(injectSecrets(step.value ?? ''), { timeout: DEFAULT_TIMEOUT });
+      else if (step.type === 'select') await locator.selectOption(injectSecrets(step.value), { timeout: DEFAULT_TIMEOUT });
       else if (step.type === 'hover') await locator.hover({ timeout: DEFAULT_TIMEOUT });
       else if (step.type === 'assertVisible') {
         /* resolve() already proved it's visible */
