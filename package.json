@@ -1,0 +1,19 @@
+{
+  "name": "reflect-lev",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Internal Reflect.run-style no-code E2E testing platform for lev.charity",
+  "workspaces": [
+    "app",
+    "runner"
+  ],
+  "scripts": {
+    "dev": "npm --workspace app run dev",
+    "build": "npm --workspace app run build",
+    "run:test": "npm --workspace runner run start",
+    "firebase:rules": "firebase deploy --only firestore:rules,firestore:indexes"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,74 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body {
+        width: 320px;
+        margin: 0;
+        font: 13px/1.4 system-ui, sans-serif;
+        background: #0c0d12;
+        color: #e7e9f0;
+      }
+      .wrap { padding: 14px; }
+      h1 { font-size: 14px; margin: 0 0 2px; display: flex; align-items: center; gap: 8px; }
+      .logo { width: 20px; height: 20px; border-radius: 5px; background: #6d5efc; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 12px; }
+      .sub { color: #8b8fa3; font-size: 11px; margin-bottom: 12px; }
+      button { font: 13px system-ui; border: none; border-radius: 8px; padding: 8px 10px; cursor: pointer; }
+      .primary { background: #6d5efc; color: #fff; width: 100%; }
+      .stop { background: #ef4444; color: #fff; width: 100%; }
+      .ghost { background: #1b1d27; color: #e7e9f0; border: 1px solid #373b4d; }
+      .row { display: flex; gap: 6px; margin-top: 8px; }
+      .row > button { flex: 1; }
+      input { width: 100%; box-sizing: border-box; background: #13141b; border: 1px solid #373b4d; color: #e7e9f0; border-radius: 8px; padding: 7px 9px; margin: 6px 0; }
+      .count { background: #13141b; border: 1px solid #262936; border-radius: 8px; padding: 8px 10px; margin: 10px 0; display: flex; justify-content: space-between; align-items: center; }
+      .dot { width: 9px; height: 9px; border-radius: 50%; background: #ef4444; display: inline-block; margin-right: 6px; }
+      .steps { max-height: 160px; overflow: auto; border: 1px solid #262936; border-radius: 8px; margin: 8px 0; }
+      .step { padding: 5px 9px; border-bottom: 1px solid #1b1d27; font-size: 12px; color: #c7cad6; }
+      .step:last-child { border-bottom: none; }
+      a { color: #6d5efc; font-size: 11px; text-decoration: none; }
+      .warn { color: #f59e0b; font-size: 11px; margin-top: 8px; }
+      .hidden { display: none; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1><span class="logo">R</span> Reflect-LEV Recorder</h1>
+      <div class="sub">Record a flow, then send it to your dashboard.</div>
+
+      <div id="idle">
+        <button id="start" class="primary">● Start recording</button>
+      </div>
+
+      <div id="active" class="hidden">
+        <div class="count">
+          <span><span class="dot"></span>Recording…</span>
+          <span id="liveCount">0 steps</span>
+        </div>
+        <button id="stop" class="stop">■ Stop</button>
+        <div class="sub" style="margin-top:8px">
+          Interact with the page. Use the on-page toolbar to add assertions.
+        </div>
+      </div>
+
+      <div id="review" class="hidden">
+        <input id="name" placeholder="Test name" />
+        <div id="steps" class="steps"></div>
+        <button id="send" class="primary">Send to dashboard →</button>
+        <div class="row">
+          <button id="copy" class="ghost">Copy JSON</button>
+          <button id="download" class="ghost">Download</button>
+          <button id="discard" class="ghost">Discard</button>
+        </div>
+        <div id="noDash" class="warn hidden">
+          Set your dashboard URL in <a id="opts" href="#">options</a> first.
+        </div>
+      </div>
+
+      <div style="margin-top:12px;text-align:right">
+        <a id="optsLink" href="#">Settings</a>
+      </div>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>

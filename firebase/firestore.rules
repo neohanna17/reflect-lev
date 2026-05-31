@@ -1,0 +1,46 @@
+rules_version = '2';
+
+// Reflect-LEV Firestore security rules.
+//
+// Access model: a user may read/write app data only if they are a "member".
+// Membership = a document at members/{uid} exists. Seed your first member in
+// the Firebase console (Firestore > members > add document, id = your uid).
+// The Playwright runner uses the Admin SDK (service account), which bypasses
+// these rules entirely, so it can always write run results.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isMember() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/members/$(request.auth.uid));
+    }
+
+    // Membership directory. Read so the app can confirm access; managed by
+    // admins in the console (or a trusted backend), never by clients.
+    match /members/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // Test cases (recorded by the extension, edited in the dashboard).
+    match /tests/{testId} {
+      allow read, create, update, delete: if isMember();
+    }
+
+    // Test run results. Members can enqueue (create) and read; the runner
+    // updates them via Admin SDK.
+    match /runs/{runId} {
+      allow read, create, update, delete: if isMember();
+    }
+
+    // Suites = grouped tests with an optional schedule.
+    match /suites/{suiteId} {
+      allow read, create, update, delete: if isMember();
+    }
+  }
+}

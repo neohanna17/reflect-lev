@@ -1,0 +1,50 @@
+name: Run Reflect-LEV tests
+
+on:
+  # Dispatched by the dashboard (via the Netlify trigger function) for a
+  # single run.
+  repository_dispatch:
+    types: [run-test]
+  # Manual trigger from the Actions tab.
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Run document id (leave blank to drain all queued runs)'
+        required: false
+        default: ''
+  # Scheduled sweep: executes any runs sitting in the queue.
+  schedule:
+    - cron: '0 6 * * *' # daily 06:00 UTC
+
+concurrency:
+  group: reflect-lev-runner
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install runner dependencies
+        working-directory: runner
+        run: npm install
+
+      - name: Install Playwright browsers
+        working-directory: runner
+        run: npx playwright install --with-deps chromium
+
+      - name: Execute run
+        working-directory: runner
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          # repository_dispatch payload > manual input > empty (drain queue)
+          RUN_ID: ${{ github.event.client_payload.run_id || github.event.inputs.run_id }}
+        run: node run.js

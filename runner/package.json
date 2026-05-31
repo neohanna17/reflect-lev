@@ -1,0 +1,15 @@
+{
+  "name": "reflect-lev-runner",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Playwright runner that replays Reflect-LEV tests and writes results to Firestore.",
+  "scripts": {
+    "start": "node run.js",
+    "postinstall": "playwright install chromium"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.1.0",
+    "playwright": "^1.44.0"
+  }
+}

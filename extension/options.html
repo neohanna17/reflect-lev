@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body { font: 14px/1.5 system-ui, sans-serif; background: #0c0d12; color: #e7e9f0; max-width: 520px; margin: 40px auto; padding: 0 20px; }
+      h1 { font-size: 18px; }
+      label { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: #8b8fa3; margin: 16px 0 6px; }
+      input { width: 100%; box-sizing: border-box; background: #13141b; border: 1px solid #373b4d; color: #e7e9f0; border-radius: 8px; padding: 9px 11px; }
+      button { margin-top: 18px; background: #6d5efc; color: #fff; border: none; border-radius: 8px; padding: 9px 16px; cursor: pointer; font: 14px system-ui; }
+      .ok { color: #22c55e; margin-left: 10px; font-size: 13px; }
+      p { color: #8b8fa3; font-size: 13px; }
+    </style>
+  </head>
+  <body>
+    <h1>Reflect-LEV Recorder · Settings</h1>
+    <p>Point the recorder at your deployed dashboard. After recording, "Send to dashboard" opens it there so the test is saved under your signed-in account.</p>
+    <label>Dashboard URL</label>
+    <input id="dash" placeholder="https://reflect-lev.netlify.app" />
+    <div>
+      <button id="save">Save</button>
+      <span id="ok" class="ok"></span>
+    </div>
+    <script src="options.js"></script>
+  </body>
+</html>

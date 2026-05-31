@@ -1,0 +1,14 @@
+rules_version = '2';
+
+// Screenshots and run artifacts. Members can read; only the Admin SDK
+// (runner) writes. Public read is disabled — the runner stores download
+// tokens / signed URLs in the run document instead.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /runs/{allPaths=**} {
+      allow read: if request.auth != null
+        && firestore.exists(/databases/(default)/documents/members/$(request.auth.uid));
+      allow write: if false;
+    }
+  }
+}

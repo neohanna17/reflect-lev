@@ -1,0 +1,16 @@
+[build]
+  command = "cd app && npm install && npm run build"
+  publish = "app/dist"
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[functions]
+  node_bundler = "esbuild"
+
+# SPA fallback so client-side routing works
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
