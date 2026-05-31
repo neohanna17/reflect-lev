@@ -105,6 +105,7 @@ export async function runTest(page, test, onStep) {
       stepId: step.id || null,
       type: step.type,
       label: stepLabel(step),
+      fromComponent: step.fromComponent || null,
       status: 'passed',
       message: '',
       healedWith: null,

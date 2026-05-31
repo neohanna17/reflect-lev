@@ -13,6 +13,7 @@ export const STEP_TYPES = {
   assertText: { label: 'Assert text present', needs: ['value'] },
   assertVisible: { label: 'Assert element visible', needs: ['target'] },
   assertUrl: { label: 'Assert URL contains', needs: ['value'] },
+  component: { label: 'Reusable component', needs: ['component'] },
 };
 
 // Modules group tests by area of the site. These are just starting
@@ -39,6 +40,7 @@ export function moduleOf(test) {
 export function stepLabel(step) {
   const def = STEP_TYPES[step.type];
   const base = def ? def.label : step.type;
+  if (step.type === 'component') return `Component: ${step.componentName || '(pick one)'}`;
   if (step.type === 'navigate' || step.type === 'assertUrl') return `${base}: ${step.value || ''}`;
   if (step.type === 'type') return `${base} "${step.value || ''}" into ${describeTarget(step)}`;
   if (step.type === 'assertText') return `${base}: "${step.value || ''}"`;

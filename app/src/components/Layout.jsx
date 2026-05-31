@@ -5,6 +5,7 @@ const navItems = [
   { to: '/', label: 'Modules', end: true },
   { to: '/runs', label: 'Runs' },
   { to: '/suites', label: 'Suites' },
+  { to: '/components', label: 'Components' },
 ];
 
 export default function Layout({ children }) {

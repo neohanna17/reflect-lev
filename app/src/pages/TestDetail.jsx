@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getTest, saveTest, deleteTest, watchRunsForTest } from '../lib/db';
+import { getTest, saveTest, deleteTest, watchRunsForTest, watchComponents } from '../lib/db';
 import { triggerRun } from '../lib/triggerRun';
-import { STEP_TYPES, stepLabel, emptyStep, DEFAULT_MODULES, moduleOf } from '../lib/schema';
+import { DEFAULT_MODULES, moduleOf } from '../lib/schema';
 import StatusBadge from '../components/StatusBadge';
 import Spinner from '../components/Spinner';
+import StepsEditor from '../components/StepsEditor';
 import { timeAgo, fmtDuration } from '../lib/format';
 
 export default function TestDetail() {
@@ -12,10 +13,10 @@ export default function TestDetail() {
   const navigate = useNavigate();
   const [test, setTest] = useState(null);
   const [runs, setRuns] = useState([]);
+  const [components, setComponents] = useState([]);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
-  const [editing, setEditing] = useState(null);
 
   useEffect(() => {
     getTest(id).then((t) => {
@@ -23,7 +24,11 @@ export default function TestDetail() {
       else setTest(t);
     });
     const unsub = watchRunsForTest(id, setRuns);
-    return () => unsub();
+    const unsubC = watchComponents(setComponents);
+    return () => {
+      unsub();
+      unsubC();
+    };
   }, [id]);
 
   if (!test) return <Spinner label="Loading test…" />;
@@ -31,19 +36,6 @@ export default function TestDetail() {
   const update = (patch) => {
     setTest((t) => ({ ...t, ...patch }));
     setDirty(true);
-  };
-  const updateStep = (i, patch) => {
-    const steps = test.steps.map((s, idx) => (idx === i ? { ...s, ...patch } : s));
-    update({ steps });
-  };
-  const addStep = () => update({ steps: [...(test.steps || []), emptyStep()] });
-  const removeStep = (i) => update({ steps: test.steps.filter((_, idx) => idx !== i) });
-  const moveStep = (i, dir) => {
-    const steps = [...test.steps];
-    const j = i + dir;
-    if (j < 0 || j >= steps.length) return;
-    [steps[i], steps[j]] = [steps[j], steps[i]];
-    update({ steps });
   };
 
   async function handleSave() {
@@ -177,51 +169,12 @@ export default function TestDetail() {
       <div className="mt-8 grid gap-6 lg:grid-cols-3">
         {/* Steps */}
         <section className="lg:col-span-2">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-400">
-              Steps ({test.steps?.length || 0})
-            </h2>
-            <button onClick={addStep} className="btn-ghost py-1 px-2.5 text-xs">
-              + Add step
-            </button>
-          </div>
-          {(!test.steps || test.steps.length === 0) && (
-            <div className="card p-6 text-center text-sm text-gray-500">
-              No steps. Record with the extension or add steps manually.
-            </div>
-          )}
-          <ol className="space-y-2">
-            {(test.steps || []).map((step, i) => (
-              <li key={step.id || i} className="card overflow-hidden">
-                <div className="flex items-center gap-3 px-3 py-2.5">
-                  <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-ink-600 text-xs text-gray-400">
-                    {i + 1}
-                  </span>
-                  <span className="flex-1 truncate text-sm">{stepLabel(step)}</span>
-                  <div className="flex items-center gap-1 text-gray-500">
-                    <button onClick={() => moveStep(i, -1)} className="px-1 hover:text-gray-200">
-                      ↑
-                    </button>
-                    <button onClick={() => moveStep(i, 1)} className="px-1 hover:text-gray-200">
-                      ↓
-                    </button>
-                    <button
-                      onClick={() => setEditing(editing === i ? null : i)}
-                      className="px-1.5 hover:text-gray-200"
-                    >
-                      ✎
-                    </button>
-                    <button onClick={() => removeStep(i)} className="px-1.5 hover:text-red-400">
-                      ✕
-                    </button>
-                  </div>
-                </div>
-                {editing === i && (
-                  <StepEditor step={step} onChange={(patch) => updateStep(i, patch)} />
-                )}
-              </li>
-            ))}
-          </ol>
+          <StepsEditor
+            steps={test.steps}
+            onChange={(steps) => update({ steps })}
+            components={components}
+            allowComponents
+          />
         </section>
 
         {/* Run history */}
@@ -251,70 +204,6 @@ export default function TestDetail() {
           </div>
         </section>
       </div>
-    </div>
-  );
-}
-
-function StepEditor({ step, onChange }) {
-  return (
-    <div className="space-y-3 border-t border-ink-600 bg-ink-900/50 px-3 py-3">
-      <div>
-        <label className="label">Action</label>
-        <select
-          className="input"
-          value={step.type}
-          onChange={(e) => onChange({ type: e.target.value })}
-        >
-          {Object.entries(STEP_TYPES).map(([k, v]) => (
-            <option key={k} value={k}>
-              {v.label}
-            </option>
-          ))}
-        </select>
-      </div>
-      {['navigate', 'type', 'press', 'select', 'wait', 'assertText', 'assertUrl'].includes(
-        step.type,
-      ) && (
-        <div>
-          <label className="label">
-            {step.type === 'navigate' || step.type === 'assertUrl'
-              ? 'URL'
-              : step.type === 'wait'
-                ? 'Milliseconds'
-                : 'Value'}
-          </label>
-          <input
-            className="input"
-            value={step.value || ''}
-            onChange={(e) => onChange({ value: e.target.value })}
-          />
-        </div>
-      )}
-      {!['navigate', 'wait', 'press', 'assertText', 'assertUrl'].includes(step.type) && (
-        <>
-          <div>
-            <label className="label">Target label</label>
-            <input
-              className="input"
-              placeholder="Human-friendly name, e.g. Donate button"
-              value={step.target?.label || ''}
-              onChange={(e) => onChange({ target: { ...step.target, label: e.target.value } })}
-            />
-          </div>
-          <div>
-            <label className="label">Selectors (one per line, tried in order = self-healing)</label>
-            <textarea
-              className="input font-mono text-xs"
-              rows={3}
-              placeholder={'#donate-btn\n[data-testid="donate"]\ntext=Donate'}
-              value={(step.selectors || []).join('\n')}
-              onChange={(e) =>
-                onChange({ selectors: e.target.value.split('\n').map((s) => s.trim()).filter(Boolean) })
-              }
-            />
-          </div>
-        </>
-      )}
     </div>
   );
 }

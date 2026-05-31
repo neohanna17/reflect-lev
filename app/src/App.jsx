@@ -10,6 +10,7 @@ import TestDetail from './pages/TestDetail';
 import Runs from './pages/Runs';
 import RunDetail from './pages/RunDetail';
 import Suites from './pages/Suites';
+import Components from './pages/Components';
 
 export default function App() {
   const { user, member, loading } = useAuth();
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="/runs" element={<Runs />} />
         <Route path="/runs/:id" element={<RunDetail />} />
         <Route path="/suites" element={<Suites />} />
+        <Route path="/components" element={<Components />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

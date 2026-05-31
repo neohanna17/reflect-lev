@@ -42,5 +42,10 @@ service cloud.firestore {
     match /suites/{suiteId} {
       allow read, create, update, delete: if isMember();
     }
+
+    // Reusable components = named step sequences shared across tests.
+    match /components/{componentId} {
+      allow read, create, update, delete: if isMember();
+    }
   }
 }

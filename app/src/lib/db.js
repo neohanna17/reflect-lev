@@ -135,4 +135,37 @@ export async function deleteSuite(id) {
   await deleteDoc(doc(db, 'suites', id));
 }
 
+// ---- Reusable components ----
+// A component is a named, saved sequence of steps that can be dropped into any
+// test as a single step. The runner expands it at run time.
+
+export function watchComponents(cb) {
+  const q = query(collection(db, 'components'), orderBy('name'));
+  return onSnapshot(q, (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }))));
+}
+
+export async function getComponent(id) {
+  const snap = await getDoc(doc(db, 'components', id));
+  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+}
+
+export async function createComponent(data) {
+  const ref = await addDoc(collection(db, 'components'), {
+    name: data.name || 'Untitled component',
+    description: data.description || '',
+    steps: data.steps || [],
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+export async function saveComponent(id, data) {
+  await updateDoc(doc(db, 'components', id), { ...data, updatedAt: serverTimestamp() });
+}
+
+export async function deleteComponent(id) {
+  await deleteDoc(doc(db, 'components', id));
+}
+
 export { doc, setDoc };

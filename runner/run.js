@@ -132,6 +132,35 @@ async function notifyDiscord({ runId, testName, outcome, errorMsg, steps, durati
   }
 }
 
+// Replace any "component" steps with the steps of the referenced component.
+// One level deep: a component's own steps must not contain components (the
+// editor enforces this; we also defensively skip any that slip through).
+async function expandComponents(steps) {
+  const list = steps || [];
+  if (!list.some((s) => s.type === 'component')) return list;
+
+  const cache = new Map();
+  const out = [];
+  for (const step of list) {
+    if (step.type !== 'component') {
+      out.push(step);
+      continue;
+    }
+    if (!step.componentId) continue;
+    let comp = cache.get(step.componentId);
+    if (!comp) {
+      const snap = await db.collection('components').doc(step.componentId).get();
+      comp = snap.exists ? { id: snap.id, ...snap.data() } : { name: step.componentName, steps: [] };
+      cache.set(step.componentId, comp);
+    }
+    for (const child of comp.steps || []) {
+      if (child.type === 'component') continue; // no nesting
+      out.push({ ...child, fromComponent: comp.name || step.componentName || 'component' });
+    }
+  }
+  return out;
+}
+
 async function executeRun(runId) {
   const runRef = db.collection('runs').doc(runId);
   const runSnap = await runRef.get();
@@ -151,6 +180,9 @@ async function executeRun(runId) {
     return;
   }
   const test = { id: testSnap.id, ...testSnap.data() };
+  // Expand any reusable-component steps into their underlying steps.
+  const effectiveSteps = await expandComponents(test.steps || []);
+  const effectiveTest = { ...test, steps: effectiveSteps };
 
   const updateBaselines = !!run.updateBaselines;
   await runRef.update({
@@ -159,7 +191,7 @@ async function executeRun(runId) {
     mode: updateBaselines ? 'baseline' : 'test',
   });
   console.log(
-    `▶ ${updateBaselines ? 'Baselining' : 'Running'} "${test.name}" (${test.steps?.length || 0} steps) → run ${runId}`,
+    `▶ ${updateBaselines ? 'Baselining' : 'Running'} "${test.name}" (${effectiveSteps.length} steps) → run ${runId}`,
   );
 
   const browser = await chromium.launch();
@@ -181,7 +213,7 @@ async function executeRun(runId) {
 
   try {
     let i = 0;
-    const { status } = await runTest(page, test, async (result, pg) => {
+    const { status } = await runTest(page, effectiveTest, async (result, pg) => {
       const index = i;
       try {
         const shot = await pg.screenshot({ fullPage: false });

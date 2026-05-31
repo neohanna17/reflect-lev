@@ -117,7 +117,14 @@ export default function RunDetail() {
           <li key={s.stepId || i} className="card overflow-hidden">
             <div className="flex items-center gap-3 px-4 py-3">
               <StatusBadge status={s.status} />
-              <span className="flex-1 truncate text-sm">{s.label || s.type}</span>
+              <span className="flex-1 truncate text-sm">
+                {s.fromComponent && (
+                  <span className="mr-1 text-xs text-brand" title={`From component: ${s.fromComponent}`}>
+                    ↳ {s.fromComponent}:
+                  </span>
+                )}
+                {s.label || s.type}
+              </span>
               {s.visual?.status === 'changed' && (
                 <span
                   className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs text-amber-400"
