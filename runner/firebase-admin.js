@@ -16,7 +16,9 @@ function credential() {
 
 const bucketName =
   process.env.FIREBASE_STORAGE_BUCKET ||
-  (process.env.FIREBASE_PROJECT_ID ? `${process.env.FIREBASE_PROJECT_ID}.appspot.com` : undefined);
+  (process.env.FIREBASE_PROJECT_ID
+    ? `${process.env.FIREBASE_PROJECT_ID}.firebasestorage.app`
+    : undefined);
 
 initializeApp({
   credential: credential(),
