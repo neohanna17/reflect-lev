@@ -52,4 +52,9 @@ jobs:
           RUN_ID: ${{ github.event.client_payload.run_id || github.event.inputs.run_id }}
           # On the daily schedule, run every active test instead of draining.
           RUN_ALL: ${{ github.event_name == 'schedule' && '1' || '' }}
+          # How many tests run at once during the daily sweep.
+          RUN_CONCURRENCY: '3'
+          # Fraction of pixels that must differ before a step is flagged as a
+          # visual change (0.01 = 1%). Lower = stricter.
+          VISUAL_THRESHOLD: '0.01'
         run: node run.js
