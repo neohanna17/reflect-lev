@@ -25,7 +25,7 @@ export default function Layout({ children }) {
             <img
               src="/logo.png"
               alt="levcharity"
-              className="h-8 w-auto"
+              className="h-7 w-auto max-w-full"
               onError={() => setLogoOk(false)}
             />
           ) : (
