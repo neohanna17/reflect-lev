@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getTest, saveTest, deleteTest, watchRunsForTest, watchComponents } from '../lib/db';
+import {
+  getTest,
+  saveTest,
+  deleteTest,
+  watchRunsForTest,
+  watchComponents,
+  createComponent,
+} from '../lib/db';
 import { triggerRun } from '../lib/triggerRun';
 import { DEFAULT_MODULES, moduleOf } from '../lib/schema';
 import StatusBadge from '../components/StatusBadge';
@@ -78,6 +85,21 @@ export default function TestDetail() {
     await handleRun({ updateBaselines: true });
   }
 
+  async function handleSaveAsComponent() {
+    // Components can't nest, so drop any component-type steps when converting.
+    const steps = (test.steps || []).filter((s) => s.type !== 'component');
+    if (steps.length === 0) {
+      alert('No reusable steps to save (reusable-component steps are skipped).');
+      return;
+    }
+    const name = prompt('Name this reusable component:', `${test.name} steps`);
+    if (!name) return;
+    if (dirty) await handleSave();
+    await createComponent({ name, steps });
+    if (confirm(`Saved "${name}" as a reusable component. Open the Components page?`))
+      navigate('/components');
+  }
+
   async function handleDelete() {
     if (!confirm(`Delete "${test.name}"? This cannot be undone.`)) return;
     await deleteTest(id);
@@ -151,6 +173,13 @@ export default function TestDetail() {
             title="Capture the current screenshots as the visual baseline for comparison"
           >
             Set visual baseline
+          </button>
+          <button
+            onClick={handleSaveAsComponent}
+            className="btn-ghost text-xs"
+            title="Save these steps as a reusable component you can drop into other tests"
+          >
+            Save as component
           </button>
           <button
             onClick={() =>
