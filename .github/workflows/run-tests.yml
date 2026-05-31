@@ -12,9 +12,10 @@ on:
         description: 'Run document id (leave blank to drain all queued runs)'
         required: false
         default: ''
-  # Scheduled daily check: runs every active test automatically.
+  # Scheduled jobs.
   schedule:
-    - cron: '0 6 * * *' # daily 06:00 UTC
+    - cron: '0 6 * * *' # daily 06:00 UTC — full sweep of every active test
+    - cron: '0 * * * *' # hourly — run any suites whose schedule is due
 
 concurrency:
   group: reflect-lev-runner
@@ -50,8 +51,10 @@ jobs:
           DASHBOARD_URL: https://lev-charity.netlify.app
           # repository_dispatch payload > manual input > empty (drain queue)
           RUN_ID: ${{ github.event.client_payload.run_id || github.event.inputs.run_id }}
-          # On the daily schedule, run every active test instead of draining.
-          RUN_ALL: ${{ github.event_name == 'schedule' && '1' || '' }}
+          # Daily cron (06:00) = full sweep of every active test.
+          RUN_ALL: ${{ github.event_name == 'schedule' && github.event.schedule == '0 6 * * *' && '1' || '' }}
+          # Hourly cron = run only the suites whose schedule is due this hour.
+          RUN_SCHEDULED: ${{ github.event_name == 'schedule' && github.event.schedule == '0 * * * *' && '1' || '' }}
           # How many tests run at once during the daily sweep.
           RUN_CONCURRENCY: '3'
           # Fraction of pixels that must differ before a step is flagged as a

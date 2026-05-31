@@ -5,6 +5,7 @@ import path from 'node:path';
 import { promises as fs } from 'node:fs';
 import { PNG } from 'pngjs';
 import pixelmatch from 'pixelmatch';
+import { Cron } from 'croner';
 import { db, bucket } from './firebase-admin.js';
 import { runTest } from './playback.js';
 
@@ -282,20 +283,12 @@ async function pool(items, size, worker) {
   await Promise.all(runners);
 }
 
-// Enqueue and execute every active test. Used by the daily scheduled job so
-// the whole suite is checked automatically without anyone clicking "Run".
-// Tests run in parallel (RUN_CONCURRENCY at a time, default 3).
-async function runAllActive() {
-  const snap = await db.collection('tests').get();
-  const tests = snap.docs
-    .map((d) => ({ id: d.id, ...d.data() }))
-    .filter((t) => t.status !== 'archived');
-  if (tests.length === 0) {
-    console.log('No active tests to run.');
-    return;
-  }
+// Enqueue run docs for the given tests and execute them in parallel
+// (RUN_CONCURRENCY at a time, default 3). Returns the failure count.
+async function enqueueAndRun(tests, triggeredBy) {
+  if (tests.length === 0) return 0;
   const concurrency = Number(process.env.RUN_CONCURRENCY) || 3;
-  console.log(`Daily check: running ${tests.length} active test(s), ${concurrency} at a time…`);
+  console.log(`Running ${tests.length} test(s), ${concurrency} at a time (${triggeredBy})…`);
 
   // Create all run docs up front so they show as "queued" immediately.
   const runIds = [];
@@ -306,7 +299,7 @@ async function runAllActive() {
       status: 'queued',
       startedAt: FieldValue.serverTimestamp(),
       finishedAt: null,
-      triggeredBy: 'schedule',
+      triggeredBy,
       steps: [],
       durationMs: 0,
       browser: 'chromium',
@@ -320,6 +313,79 @@ async function runAllActive() {
     const outcome = await executeRun(id);
     if (outcome === 'failed' || outcome === 'error') failures += 1;
   });
+  return failures;
+}
+
+// Enqueue and execute every active test. Used by the daily scheduled job so
+// the whole suite is checked automatically without anyone clicking "Run".
+async function runAllActive() {
+  const snap = await db.collection('tests').get();
+  const tests = snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((t) => t.status !== 'archived');
+  if (tests.length === 0) {
+    console.log('No active tests to run.');
+    return;
+  }
+  console.log(`Daily check: ${tests.length} active test(s).`);
+  const failures = await enqueueAndRun(tests, 'schedule');
+  if (failures > 0) process.exitCode = 1;
+}
+
+// Run any suites whose schedule is "due". The scheduler workflow fires this
+// hourly; a suite's cron may be daily/weekly/etc. We fire each scheduled
+// occurrence exactly once by remembering the last occurrence we ran
+// (suite.lastScheduledAt) and only running when a newer occurrence has passed.
+async function runScheduledSuites() {
+  const now = new Date();
+  const suitesSnap = await db.collection('suites').get();
+  const suites = suitesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+  const dueTestIds = new Set();
+  const ranSuites = [];
+  for (const suite of suites) {
+    const expr = (suite.schedule || '').trim();
+    if (!expr) continue;
+    let prev;
+    try {
+      // Schedules are stored as UTC cron strings (the UI converts local time).
+      prev = new Cron(expr, { timezone: 'UTC' }).previousRun(now);
+    } catch (e) {
+      console.warn(`Suite "${suite.name}" has an invalid schedule "${expr}":`, e.message);
+      continue;
+    }
+    if (!prev) continue;
+    const last = suite.lastScheduledAt?.toMillis ? suite.lastScheduledAt.toMillis() : 0;
+    if (prev.getTime() <= last) continue; // already ran this occurrence
+
+    (suite.testIds || []).forEach((id) => dueTestIds.add(id));
+    ranSuites.push({ id: suite.id, name: suite.name, occurrence: prev });
+  }
+
+  if (ranSuites.length === 0) {
+    console.log('No suites due this hour.');
+    return;
+  }
+  console.log(`Due suites: ${ranSuites.map((s) => s.name).join(', ')}`);
+
+  // Resolve the unique set of active tests across all due suites.
+  const tests = [];
+  for (const id of dueTestIds) {
+    const snap = await db.collection('tests').doc(id).get();
+    if (snap.exists && snap.data().status !== 'archived') {
+      tests.push({ id: snap.id, ...snap.data() });
+    }
+  }
+
+  const failures = await enqueueAndRun(tests, 'schedule');
+
+  // Mark each due suite's occurrence as handled so it won't re-fire.
+  for (const s of ranSuites) {
+    await db
+      .collection('suites')
+      .doc(s.id)
+      .update({ lastScheduledAt: s.occurrence, lastScheduledRunAt: FieldValue.serverTimestamp() });
+  }
   if (failures > 0) process.exitCode = 1;
 }
 
@@ -331,6 +397,8 @@ async function main() {
     if (outcome === 'failed' || outcome === 'error') process.exitCode = 1;
   } else if (process.env.RUN_ALL === '1') {
     await runAllActive();
+  } else if (process.env.RUN_SCHEDULED === '1') {
+    await runScheduledSuites();
   } else {
     await drainQueue();
   }
