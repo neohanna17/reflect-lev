@@ -180,18 +180,31 @@ async function executeRun(runId) {
     return;
   }
   const test = { id: testSnap.id, ...testSnap.data() };
+
+  // Optional partial run: slice the step range before expanding components.
+  const allSteps = test.steps || [];
+  const from = Number.isInteger(run.fromStep) ? run.fromStep : 0;
+  const to = Number.isInteger(run.toStep) ? run.toStep : allSteps.length - 1;
+  const sliced = allSteps.slice(from, to + 1);
+  const partial = from > 0 || to < allSteps.length - 1;
+
   // Expand any reusable-component steps into their underlying steps.
-  const effectiveSteps = await expandComponents(test.steps || []);
+  const effectiveSteps = await expandComponents(sliced);
   const effectiveTest = { ...test, steps: effectiveSteps };
 
-  const updateBaselines = !!run.updateBaselines;
+  // Visual baselines are keyed by step index, which only lines up on a full
+  // run, so we skip visual comparison on partial runs.
+  const updateBaselines = !!run.updateBaselines && !partial;
   await runRef.update({
     status: 'running',
     testName: test.name,
     mode: updateBaselines ? 'baseline' : 'test',
+    partial,
   });
   console.log(
-    `▶ ${updateBaselines ? 'Baselining' : 'Running'} "${test.name}" (${effectiveSteps.length} steps) → run ${runId}`,
+    `▶ ${updateBaselines ? 'Baselining' : 'Running'} "${test.name}"` +
+      (partial ? ` [steps ${from + 1}–${to + 1}]` : '') +
+      ` (${effectiveSteps.length} steps) → run ${runId}`,
   );
 
   const browser = await chromium.launch();
@@ -218,16 +231,18 @@ async function executeRun(runId) {
       try {
         const shot = await pg.screenshot({ fullPage: false });
         result.screenshotUrl = await uploadScreenshot(runId, index, shot);
-        try {
-          result.visual = await compareVisual({
-            testId: test.id,
-            runId,
-            index,
-            shot,
-            update: updateBaselines,
-          });
-        } catch (e) {
-          console.warn('visual compare failed:', e.message);
+        if (!partial) {
+          try {
+            result.visual = await compareVisual({
+              testId: test.id,
+              runId,
+              index,
+              shot,
+              update: updateBaselines,
+            });
+          } catch (e) {
+            console.warn('visual compare failed:', e.message);
+          }
         }
       } catch (e) {
         console.warn('screenshot failed:', e.message);

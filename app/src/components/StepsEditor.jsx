@@ -4,7 +4,14 @@ import { STEP_TYPES, stepLabel, emptyStep } from '../lib/schema';
 // Ordered, editable step list. Used by both the test editor and the reusable
 // component editor. Pass `components` + `allowComponents` to enable inserting
 // a reusable component as a step (disabled inside a component to avoid nesting).
-export default function StepsEditor({ steps, onChange, components = [], allowComponents = false }) {
+export default function StepsEditor({
+  steps,
+  onChange,
+  components = [],
+  allowComponents = false,
+  onRunFrom,
+  onRunUntil,
+}) {
   const [editing, setEditing] = useState(null);
   const list = steps || [];
 
@@ -59,6 +66,24 @@ export default function StepsEditor({ steps, onChange, components = [], allowCom
                 {labelFor(step)}
               </span>
               <div className="flex items-center gap-1 text-gray-500">
+                {onRunUntil && (
+                  <button
+                    onClick={() => onRunUntil(i)}
+                    className="px-1 hover:text-brand"
+                    title="Run from the start up to and including this step, then stop"
+                  >
+                    ▶⤒
+                  </button>
+                )}
+                {onRunFrom && (
+                  <button
+                    onClick={() => onRunFrom(i)}
+                    className="px-1 hover:text-brand"
+                    title="Run from this step to the end"
+                  >
+                    ▶↓
+                  </button>
+                )}
                 <button onClick={() => moveStep(i, -1)} className="px-1 hover:text-gray-200">
                   ↑
                 </button>

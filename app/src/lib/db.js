@@ -89,6 +89,8 @@ export async function enqueueRun(test, triggeredBy, opts = {}) {
     finishedAt: null,
     triggeredBy: triggeredBy || 'dashboard',
     updateBaselines: !!opts.updateBaselines,
+    fromStep: Number.isInteger(opts.fromStep) ? opts.fromStep : null,
+    toStep: Number.isInteger(opts.toStep) ? opts.toStep : null,
     steps: [],
     durationMs: 0,
     browser: 'chromium',

@@ -52,6 +52,14 @@ export default function RunDetail() {
         </div>
       </div>
 
+      {run.partial && (
+        <div className="mt-4 rounded-lg border border-purple-500/30 bg-purple-500/10 px-4 py-2 text-sm text-purple-300">
+          Partial run
+          {Number.isInteger(run.fromStep) && run.fromStep > 0 ? ` from step ${run.fromStep + 1}` : ''}
+          {Number.isInteger(run.toStep) ? ` up to step ${run.toStep + 1}` : ''} · visual checks skipped.
+        </div>
+      )}
+
       {pending && (
         <div className="mt-4 flex items-center gap-3 rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-300">
           <span className="h-3 w-3 animate-spin rounded-full border-2 border-blue-300/40 border-t-blue-300" />

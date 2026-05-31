@@ -174,6 +174,8 @@ export default function TestDetail() {
             onChange={(steps) => update({ steps })}
             components={components}
             allowComponents
+            onRunFrom={(i) => handleRun({ fromStep: i })}
+            onRunUntil={(i) => handleRun({ toStep: i })}
           />
         </section>
 
