@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Reflect-LEV Recorder",
+  "name": "Lev.Charity QA",
   "version": "0.1.0",
-  "description": "Record clicks, typing and assertions on lev.charity and turn them into replayable Reflect-LEV tests.",
+  "description": "Record clicks, typing and assertions on lev.charity and turn them into replayable QA tests.",
   "permissions": ["activeTab", "scripting", "storage", "tabs"],
   "host_permissions": ["http://*/*", "https://*/*"],
   "background": {
@@ -10,7 +10,7 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Reflect-LEV Recorder"
+    "default_title": "Lev.Charity QA"
   },
   "options_page": "options.html",
   "content_scripts": [
