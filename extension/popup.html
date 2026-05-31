@@ -53,6 +53,12 @@
 
       <div id="review" class="hidden">
         <input id="name" placeholder="Test name" />
+        <input id="module" list="modules" placeholder="Module (e.g. Ecards, Campaigns, Donations)" />
+        <datalist id="modules">
+          <option value="Ecards"></option>
+          <option value="Campaigns"></option>
+          <option value="Donations"></option>
+        </datalist>
         <div id="steps" class="steps"></div>
         <button id="send" class="primary">Send to dashboard →</button>
         <div class="row">

@@ -28,6 +28,8 @@ async function render() {
     $('liveCount').textContent = `${state.steps.length} steps`;
   } else if (hasSteps) {
     $('name').value = state.name || '';
+    const { rl_last_module } = await chrome.storage.local.get('rl_last_module');
+    if (rl_last_module && !$('module').value) $('module').value = rl_last_module;
     $('steps').innerHTML = state.steps
       .map((s, i) => `<div class="step">${i + 1}. ${escapeHtml(stepLabel(s))}</div>`)
       .join('');
@@ -45,6 +47,7 @@ function buildTest() {
     const state = await ask({ type: 'GET_RECORDING' });
     res({
       name: $('name').value || state.name || 'Recorded test',
+      module: $('module').value.trim(),
       startUrl: state.startUrl || '',
       steps: state.steps || [],
     });
@@ -69,6 +72,7 @@ $('send').onclick = async () => {
     return;
   }
   const test = await buildTest();
+  if (test.module) await chrome.storage.local.set({ rl_last_module: test.module });
   const payload = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(test)))));
   const url = rl_dashboard_url.replace(/\/+$/, '') + '/#import=' + payload;
   chrome.tabs.create({ url });

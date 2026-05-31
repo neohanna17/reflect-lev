@@ -34,6 +34,7 @@ export default function TestsList() {
         const rec = JSON.parse(json);
         const id = await createTest({
           name: rec.name || 'Recorded test',
+          module: rec.module || '',
           startUrl: rec.startUrl || '',
           steps: rec.steps || [],
           createdBy: user?.email || null,
