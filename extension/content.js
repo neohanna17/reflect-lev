@@ -6,6 +6,7 @@
   let recording = false;
   let pendingAssert = null; // null | 'text' | 'visible'
   let toolbar = null;
+  let keepAlive = null; // interval that re-appends the toolbar if a SPA wipes it
 
   const TOOLBAR_ID = '__rl_toolbar__';
 
@@ -46,7 +47,7 @@
       return;
     }
     send(buildStep('click', el));
-    flash(el, '#6d5efc');
+    flash(el, '#2f6df6');
   }
 
   function onChange(e) {
@@ -93,42 +94,82 @@
   }
 
   // ---- toolbar ----
-  function showToolbar() {
-    if (toolbar) return;
-    toolbar = document.createElement('div');
-    toolbar.id = TOOLBAR_ID;
-    toolbar.style.cssText =
-      'position:fixed;bottom:16px;right:16px;z-index:2147483647;display:flex;gap:8px;align-items:center;' +
-      'background:#13141b;color:#e7e9f0;border:1px solid #373b4d;border-radius:12px;padding:8px 10px;' +
-      'font:13px/1.2 system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.4)';
-    toolbar.innerHTML = `
-      <span style="display:flex;align-items:center;gap:6px;font-weight:600">
-        <span id="__rl_dot" style="width:9px;height:9px;border-radius:50%;background:#ef4444;animation:rlpulse 1s infinite"></span>
-        Recording
-      </span>
-      <button id="__rl_assert_text" style="${btn()}">Assert text</button>
-      <button id="__rl_assert_vis" style="${btn()}">Assert visible</button>
-      <button id="__rl_stop" style="${btn('#ef4444','#fff')}">Stop</button>
-      <style>@keyframes rlpulse{0%,100%{opacity:1}50%{opacity:.3}}</style>
+  function buildToolbar() {
+    const bar = document.createElement('div');
+    bar.id = TOOLBAR_ID;
+    bar.style.cssText =
+      'position:fixed;bottom:16px;right:16px;z-index:2147483647;display:flex;flex-direction:column;gap:8px;' +
+      'background:#13141b;color:#e7e9f0;border:1px solid #373b4d;border-radius:14px;padding:10px 12px;' +
+      'font:13px/1.2 system-ui,-apple-system,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.45)';
+    bar.innerHTML = `
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="display:flex;align-items:center;gap:7px;font-weight:600;margin-right:4px">
+          <span id="__rl_dot" style="width:9px;height:9px;border-radius:50%;background:#ea4d3d;box-shadow:0 0 0 0 rgba(234,77,61,.6);animation:rlpulse 1.2s infinite"></span>
+          <span id="__rl_label">Recording</span>
+        </span>
+        <button id="__rl_assert_text" style="${btn()}">Assert text</button>
+        <button id="__rl_assert_vis" style="${btn()}">Assert visible</button>
+        <button id="__rl_stop" style="${btn('#ea4d3d','#fff')}">■ Stop</button>
+      </div>
+      <div id="__rl_hint" style="display:none;font-size:11.5px;color:#fbbc09">
+        Now click the element on the page you want to check.
+      </div>
+      <style>
+        @keyframes rlpulse{0%{box-shadow:0 0 0 0 rgba(234,77,61,.5)}70%{box-shadow:0 0 0 7px rgba(234,77,61,0)}100%{box-shadow:0 0 0 0 rgba(234,77,61,0)}}
+        #${TOOLBAR_ID} button:hover{filter:brightness(1.15)}
+      </style>
     `;
+    bar.querySelector('#__rl_assert_text').onclick = () => setAssert(pendingAssert === 'text' ? null : 'text');
+    bar.querySelector('#__rl_assert_vis').onclick = () => setAssert(pendingAssert === 'visible' ? null : 'visible');
+    bar.querySelector('#__rl_stop').onclick = () => chrome.runtime.sendMessage({ type: 'STOP' });
+    return bar;
+  }
+
+  function showToolbar() {
+    ensureToolbar();
+    // Some single-page apps replace large chunks of the DOM on navigation,
+    // which can take our toolbar with it. Re-append it if it goes missing.
+    if (!keepAlive) {
+      keepAlive = setInterval(() => {
+        if (recording && !document.getElementById(TOOLBAR_ID)) ensureToolbar();
+      }, 1000);
+    }
+  }
+  function ensureToolbar() {
+    if (document.getElementById(TOOLBAR_ID)) return;
+    toolbar = buildToolbar();
     document.documentElement.appendChild(toolbar);
-    toolbar.querySelector('#__rl_assert_text').onclick = () => setAssert('text');
-    toolbar.querySelector('#__rl_assert_vis').onclick = () => setAssert('visible');
-    toolbar.querySelector('#__rl_stop').onclick = () =>
-      chrome.runtime.sendMessage({ type: 'STOP' });
+    refreshAssertUi();
   }
   function btn(bg = '#262936', color = '#e7e9f0') {
-    return `background:${bg};color:${color};border:none;border-radius:8px;padding:5px 9px;cursor:pointer;font:12px system-ui`;
+    return `background:${bg};color:${color};border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font:12px system-ui;font-weight:600`;
   }
   function setAssert(mode) {
     pendingAssert = mode;
+    document.body && (document.body.style.cursor = mode ? 'crosshair' : '');
+    refreshAssertUi();
+  }
+  // Reflect the current assert mode in the toolbar (active button + hint).
+  function refreshAssertUi() {
     if (!toolbar) return;
     const dot = toolbar.querySelector('#__rl_dot');
-    dot.style.background = mode ? '#22c55e' : '#ef4444';
-    document.body && (document.body.style.cursor = mode ? 'crosshair' : '');
+    const label = toolbar.querySelector('#__rl_label');
+    const hint = toolbar.querySelector('#__rl_hint');
+    const tBtn = toolbar.querySelector('#__rl_assert_text');
+    const vBtn = toolbar.querySelector('#__rl_assert_vis');
+    if (dot) dot.style.background = pendingAssert ? '#fbbc09' : '#ea4d3d';
+    if (label) label.textContent = pendingAssert ? 'Pick element…' : 'Recording';
+    if (hint) hint.style.display = pendingAssert ? 'block' : 'none';
+    if (tBtn) tBtn.style.background = pendingAssert === 'text' ? '#2f6df6' : '#262936';
+    if (vBtn) vBtn.style.background = pendingAssert === 'visible' ? '#2f6df6' : '#262936';
   }
   function hideToolbar() {
-    if (toolbar) toolbar.remove();
+    if (keepAlive) {
+      clearInterval(keepAlive);
+      keepAlive = null;
+    }
+    const existing = document.getElementById(TOOLBAR_ID);
+    if (existing) existing.remove();
     toolbar = null;
     document.body && (document.body.style.cursor = '');
   }

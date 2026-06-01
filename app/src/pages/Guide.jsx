@@ -445,7 +445,7 @@ export default function Guide() {
             Runs, Suites, Components and Reports — and explains exactly what each one does.
           </p>
         </div>
-        <button onClick={startProductTour} className="btn-primary shrink-0">
+        <button onClick={() => startProductTour()} className="btn-primary shrink-0">
           ▶ Start interactive walkthrough
         </button>
       </div>

@@ -5,19 +5,21 @@ import 'driver.js/dist/driver.css';
 
 // Interactive product tour. Mounted once inside the Layout (so it can navigate
 // via React Router) and started by dispatching a `start-product-tour` window
-// event from anywhere (e.g. the Guide page button).
+// event from anywhere (e.g. the Guide page button, or the floating help button).
 //
 // Steps walk across every main page. `path` switches route before a step; the
 // tour waits for the step's target element to appear before highlighting it.
 // Elements are matched by `data-tour="…"` anchors placed throughout the app; a
-// step with no `element` shows a centred popover.
+// step with no `element` shows a centred popover. `menu` is the short label
+// shown in the jump-to-step dropdown.
 const STEPS = [
   {
     path: '/',
+    menu: 'Welcome',
     popover: {
       title: '👋 Welcome to Lev.Charity QA',
       description:
-        "This quick tour walks through every part of the dashboard and what each button does. Use Next / Back, or press Esc to leave any time.",
+        'This quick tour walks through every part of the dashboard and what each button does. Use Next / Back, jump to any step with the “Steps” menu, or press Esc to leave any time.',
     },
   },
 
@@ -25,6 +27,7 @@ const STEPS = [
   {
     path: '/',
     element: '[data-tour="nav-modules"]',
+    menu: 'Sidebar · Modules',
     popover: {
       title: 'Modules',
       description: 'Home. Your tests grouped by area of the site (Campaigns, Donations…).',
@@ -33,10 +36,12 @@ const STEPS = [
   },
   {
     element: '[data-tour="nav-runs"]',
+    menu: 'Sidebar · Runs',
     popover: { title: 'Runs', description: 'Every test execution, newest first.', side: 'right' },
   },
   {
     element: '[data-tour="nav-suites"]',
+    menu: 'Sidebar · Suites',
     popover: {
       title: 'Suites',
       description: 'Groups of tests you run together — on demand or on a schedule.',
@@ -45,6 +50,7 @@ const STEPS = [
   },
   {
     element: '[data-tour="nav-components"]',
+    menu: 'Sidebar · Components',
     popover: {
       title: 'Components',
       description: 'Reusable blocks of steps — like “Log in” — that you drop into many tests.',
@@ -53,6 +59,7 @@ const STEPS = [
   },
   {
     element: '[data-tour="nav-reports"]',
+    menu: 'Sidebar · Reports',
     popover: {
       title: 'Reports',
       description: 'Pass rates, module health, flaky and slowest tests, recent failures.',
@@ -61,44 +68,60 @@ const STEPS = [
   },
   {
     element: '[data-tour="nav-guide"]',
+    menu: 'Sidebar · Guide',
     popover: {
       title: 'Guide',
-      description: 'The written, step-by-step onboarding — read it any time.',
+      description: 'The written, step-by-step onboarding — and the button to relaunch this tour.',
       side: 'right',
     },
   },
   {
     element: '[data-tour="nav-tech"]',
+    menu: 'Sidebar · Tech guide',
     popover: {
       title: 'Tech guide',
-      description: 'How it all works under the hood: Playwright, GitHub Actions, Firebase.',
+      description: 'How it all works under the hood: Playwright, GitHub Actions, Firebase — plus how to add new members.',
       side: 'right',
     },
   },
   {
     element: '[data-tour="nav-signout"]',
+    menu: 'Sidebar · Sign out',
     popover: { title: 'Sign out', description: 'Leave the dashboard. Access is members-only.', side: 'right' },
   },
 
-  // ---- Modules page ----
+  // ---- Modules page / creating tests ----
+  {
+    path: '/',
+    menu: 'Creating a test',
+    popover: {
+      title: '✏️ Two ways to make a test',
+      description:
+        'There are two ways to create a test. <b>1) Record it</b> with the Chrome extension — click through lev.charity once and it writes the steps for you, then hands them back here. <b>2) Build it by hand</b> with “+ New test”. The next two buttons cover both.',
+    },
+  },
   {
     path: '/',
     element: '[data-tour="modules-smoke"]',
+    menu: 'Modules · Login smoke test',
     popover: {
       title: '+ Login smoke test',
       description:
-        'One click creates a starter test that runs your “Log in” component and checks it reached the dashboard. The fastest way to confirm login works.',
+        'One click creates a starter test that runs your “Log in” component and checks it reached the admin dashboard. The fastest way to confirm login works — a great first test.',
     },
   },
   {
     element: '[data-tour="modules-new"]',
+    menu: 'Modules · New test',
     popover: {
       title: '+ New test',
-      description: 'Create a blank test to build by hand, step by step.',
+      description:
+        'Create a blank test to build by hand, step by step. Or — better for most flows — record it with the Chrome extension: hit Record, click through the site, then send it here and it lands as a ready-to-run test.',
     },
   },
   {
     element: '[data-tour="modules-card"]',
+    menu: 'Modules · Cards',
     popover: {
       title: 'Module cards',
       description:
@@ -110,6 +133,7 @@ const STEPS = [
   {
     path: '/runs',
     element: '[data-tour="runs-toolbar"]',
+    menu: 'Runs · Filters',
     popover: {
       title: 'Filter runs',
       description: 'Narrow by status (all / failed / passed / in progress), module, or test name.',
@@ -117,6 +141,7 @@ const STEPS = [
   },
   {
     element: '[data-tour="runs-list"]',
+    menu: 'Runs · History',
     popover: {
       title: 'Run history',
       description:
@@ -128,10 +153,12 @@ const STEPS = [
   {
     path: '/suites',
     element: '[data-tour="suites-new"]',
+    menu: 'Suites · New suite',
     popover: { title: '+ New suite', description: 'Create a group of tests that run together.' },
   },
   {
     element: '[data-tour="suite-card"]',
+    menu: 'Suites · A suite',
     popover: {
       title: 'A suite',
       description:
@@ -143,6 +170,7 @@ const STEPS = [
   {
     path: '/components',
     element: '[data-tour="components-new"]',
+    menu: 'Components · New',
     popover: {
       title: '+ New component',
       description: 'Save a sequence of steps once (like “Log in”) and reuse it across tests.',
@@ -150,6 +178,7 @@ const STEPS = [
   },
   {
     element: '[data-tour="components-list"]',
+    menu: 'Components · List',
     popover: {
       title: 'Your components',
       description:
@@ -161,6 +190,7 @@ const STEPS = [
   {
     path: '/reports',
     element: '[data-tour="reports-window"]',
+    menu: 'Reports · Time window',
     popover: {
       title: 'Time window',
       description: 'Switch between the last 7 days, 30 days, or all time.',
@@ -168,6 +198,7 @@ const STEPS = [
   },
   {
     element: '[data-tour="reports-tiles"]',
+    menu: 'Reports · Headline health',
     popover: {
       title: 'Headline health',
       description:
@@ -179,16 +210,20 @@ const STEPS = [
   {
     path: '/guide',
     element: '[data-tour="nav-guide"]',
+    menu: 'Finish',
     popover: {
       title: "🎉 That's the tour!",
       description:
-        'You can reopen this walkthrough any time from the Guide page, or read the written guide for more detail. Happy testing!',
+        'Relaunch it any time from the Guide page, or with the floating “Tour” button bottom-right. Read the written guide for more detail. Happy testing!',
       side: 'right',
     },
   },
 ];
 
-function waitForEl(selector, timeout = 5000) {
+// Resolve once the selector matches (element rendered) or we give up. Pages may
+// show a loading spinner first, so we poll generously rather than assume the
+// target is present the instant the route changes.
+function waitForEl(selector, timeout = 10000) {
   return new Promise((resolve) => {
     if (!selector) return resolve(null);
     const started = Date.now();
@@ -205,55 +240,91 @@ function waitForEl(selector, timeout = 5000) {
 export default function ProductTour() {
   const navigate = useNavigate();
   const driverRef = useRef(null);
+  const navRef = useRef(navigate);
+  navRef.current = navigate;
 
-  const goToStep = useCallback(
-    async (step) => {
-      if (step?.path && step.path !== window.location.pathname) {
-        navigate(step.path);
+  // Switch route if needed, then wait for the step's target to render.
+  const prepareStep = useCallback(async (step) => {
+    if (step?.path && step.path !== window.location.pathname) {
+      navRef.current(step.path);
+    }
+    await waitForEl(step?.element);
+  }, []);
+
+  // Inject a "Steps ▾" jump menu into every popover footer so the user can
+  // hop directly to any step.
+  const renderJumpMenu = useCallback((popover) => {
+    const d = driverRef.current;
+    if (!d || !popover?.footerButtons) return;
+    const active = d.getActiveIndex();
+    const select = document.createElement('select');
+    select.className = 'lev-tour-jump';
+    select.title = 'Jump to a step';
+    STEPS.forEach((s, i) => {
+      const opt = document.createElement('option');
+      opt.value = String(i);
+      opt.textContent = `${i + 1}. ${s.menu}`;
+      if (i === active) opt.selected = true;
+      select.appendChild(opt);
+    });
+    select.addEventListener('change', async (e) => {
+      const idx = Number(e.target.value);
+      if (idx === d.getActiveIndex()) return;
+      await prepareStep(STEPS[idx]);
+      d.moveTo(idx);
+    });
+    // Put the menu on the left of the footer, before the prev/next buttons.
+    popover.footerButtons.insertBefore(select, popover.footerButtons.firstChild);
+  }, [prepareStep]);
+
+  const start = useCallback(
+    async (startIndex = 0) => {
+      if (driverRef.current?.isActive?.()) {
+        driverRef.current.destroy();
       }
-      await waitForEl(step?.element);
+      const d = driver({
+        showProgress: true,
+        allowClose: true,
+        overlayColor: 'rgba(15,23,42,0.55)',
+        stagePadding: 6,
+        stageRadius: 10,
+        popoverClass: 'lev-tour',
+        progressText: 'Step {{current}} of {{total}}',
+        nextBtnText: 'Next →',
+        prevBtnText: '← Back',
+        doneBtnText: 'Done',
+        steps: STEPS.map((s) => ({ element: s.element, popover: s.popover })),
+        onPopoverRender: (popover) => renderJumpMenu(popover),
+        onNextClick: async () => {
+          const i = d.getActiveIndex();
+          const next = STEPS[i + 1];
+          if (!next) {
+            d.destroy();
+            return;
+          }
+          await prepareStep(next);
+          d.moveNext();
+        },
+        onPrevClick: async () => {
+          const i = d.getActiveIndex();
+          const prev = STEPS[i - 1];
+          if (!prev) {
+            d.movePrevious();
+            return;
+          }
+          await prepareStep(prev);
+          d.movePrevious();
+        },
+      });
+      driverRef.current = d;
+      await prepareStep(STEPS[startIndex]);
+      d.drive(startIndex);
     },
-    [navigate],
+    [prepareStep, renderJumpMenu],
   );
 
-  const start = useCallback(async () => {
-    if (driverRef.current?.isActive?.()) return;
-    const d = driver({
-      showProgress: true,
-      allowClose: true,
-      overlayColor: 'rgba(15,23,42,0.6)',
-      nextBtnText: 'Next →',
-      prevBtnText: '← Back',
-      doneBtnText: 'Done',
-      steps: STEPS.map((s) => ({ element: s.element, popover: s.popover })),
-      onNextClick: async () => {
-        const i = d.getActiveIndex();
-        const next = STEPS[i + 1];
-        if (!next) {
-          d.destroy();
-          return;
-        }
-        await goToStep(next);
-        d.moveNext();
-      },
-      onPrevClick: async () => {
-        const i = d.getActiveIndex();
-        const prev = STEPS[i - 1];
-        if (!prev) {
-          d.movePrevious();
-          return;
-        }
-        await goToStep(prev);
-        d.movePrevious();
-      },
-    });
-    driverRef.current = d;
-    await goToStep(STEPS[0]);
-    d.drive();
-  }, [goToStep]);
-
   useEffect(() => {
-    const handler = () => start();
+    const handler = (e) => start(e?.detail?.stepIndex || 0);
     window.addEventListener('start-product-tour', handler);
     return () => {
       window.removeEventListener('start-product-tour', handler);
@@ -261,10 +332,20 @@ export default function ProductTour() {
     };
   }, [start]);
 
-  return null;
+  // Floating "Tour" button — an always-available way back into the walkthrough.
+  return (
+    <button
+      type="button"
+      onClick={() => start(0)}
+      className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand/30 transition-transform hover:scale-105 hover:bg-brand-600"
+      title="Start the interactive walkthrough"
+    >
+      <span aria-hidden>🧭</span> Tour
+    </button>
+  );
 }
 
-// Helper any component can import to kick off the tour.
-export function startProductTour() {
-  window.dispatchEvent(new Event('start-product-tour'));
+// Helper any component can import to kick off the tour (optionally at a step).
+export function startProductTour(stepIndex = 0) {
+  window.dispatchEvent(new CustomEvent('start-product-tour', { detail: { stepIndex } }));
 }

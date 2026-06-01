@@ -86,3 +86,106 @@ body {
   border-radius: 0 0.4rem 0.4rem 0;
   color: #1847c0;
 }
+
+/* ---- Interactive product tour (driver.js) — branded with logo colours ---- */
+.driver-popover.lev-tour {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 0;
+  box-shadow: 0 20px 48px -12px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(15, 23, 42, 0.04);
+  max-width: 360px;
+  font-family: system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+}
+/* Tri-colour logo bar across the top of every popover. */
+.driver-popover.lev-tour::before {
+  content: '';
+  display: block;
+  height: 5px;
+  background: linear-gradient(90deg, #2f6df6 0 38%, #fbbc09 38% 70%, #ea4d3d 70% 100%);
+}
+.driver-popover.lev-tour .driver-popover-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  padding: 16px 18px 0;
+  line-height: 1.3;
+}
+.driver-popover.lev-tour .driver-popover-description {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: #475569;
+  padding: 8px 18px 4px;
+}
+.driver-popover.lev-tour .driver-popover-description b {
+  color: #1f5be0;
+  font-weight: 600;
+}
+.driver-popover.lev-tour .driver-popover-progress-text {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+.driver-popover.lev-tour .driver-popover-footer {
+  padding: 12px 18px 16px;
+  gap: 8px;
+}
+.driver-popover.lev-tour .driver-popover-navigation-btns {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.driver-popover.lev-tour .driver-popover-prev-btn,
+.driver-popover.lev-tour .driver-popover-next-btn {
+  text-shadow: none;
+  border: none;
+  border-radius: 9px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+.driver-popover.lev-tour .driver-popover-prev-btn {
+  background: #eef1f6;
+  color: #334155;
+}
+.driver-popover.lev-tour .driver-popover-prev-btn:hover {
+  background: #e3e7ef;
+}
+.driver-popover.lev-tour .driver-popover-next-btn {
+  background: #2f6df6;
+  color: #fff;
+}
+.driver-popover.lev-tour .driver-popover-next-btn:hover {
+  background: #1f5be0;
+}
+.driver-popover.lev-tour .driver-popover-close-btn {
+  color: #94a3b8;
+  font-size: 20px;
+  transition: color 0.15s;
+}
+.driver-popover.lev-tour .driver-popover-close-btn:hover {
+  color: #ea4d3d;
+}
+/* Jump-to-step dropdown injected into the footer. */
+.driver-popover.lev-tour .lev-tour-jump {
+  margin-right: auto;
+  max-width: 130px;
+  border: 1px solid #e3e7ef;
+  border-radius: 9px;
+  background: #fff;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+.driver-popover.lev-tour .lev-tour-jump:hover {
+  border-color: #2f6df6;
+}
+.driver-popover.lev-tour .driver-popover-arrow {
+  color: #fff;
+}
