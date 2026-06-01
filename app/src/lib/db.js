@@ -15,6 +15,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
+import { isLoginComponentName } from './schema';
 
 const FEEDBACK_NOTIFY_URL =
   import.meta.env.VITE_FEEDBACK_NOTIFY_URL || '/.netlify/functions/notify-feedback';
@@ -177,6 +178,15 @@ export async function deleteSuite(id) {
 export function watchComponents(cb) {
   const q = query(collection(db, 'components'), orderBy('name'));
   return onSnapshot(q, (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }))));
+}
+
+// Find the reusable component that represents logging in (matched by name), so
+// new tests can be seeded with it as their first step. Returns the component
+// doc or null.
+export async function getLoginComponent() {
+  const snap = await getDocs(collection(db, 'components'));
+  const comps = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  return comps.find((c) => isLoginComponentName(c.name)) || null;
 }
 
 export async function getComponent(id) {

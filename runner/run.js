@@ -3,6 +3,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import os from 'node:os';
 import path from 'node:path';
 import { promises as fs } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { PNG } from 'pngjs';
 import pixelmatch from 'pixelmatch';
 import { Cron } from 'croner';
@@ -370,6 +371,9 @@ async function enqueueAndRun(tests, triggeredBy, setupForTest) {
       triggeredBy,
       setupComponentIds: wrap.setupComponentIds || null,
       teardownComponentIds: wrap.teardownComponentIds || null,
+      suiteId: wrap.suiteId || null,
+      suiteRunId: wrap.suiteRunId || null,
+      suiteName: wrap.suiteName || null,
       steps: [],
       durationMs: 0,
       browser: 'chromium',
@@ -448,8 +452,9 @@ async function runScheduledSuites() {
     if (!expr) continue;
     let prev;
     try {
-      // Schedules are stored as UTC cron strings (the UI converts local time).
-      prev = new Cron(expr, { timezone: 'UTC' }).previousRun(now);
+      // The cron's time-of-day is wall-clock in the suite's timezone. Older
+      // suites without scheduleTz fall back to UTC (how they were stored).
+      prev = new Cron(expr, { timezone: suite.scheduleTz || 'UTC' }).previousRun(now);
     } catch (e) {
       console.warn(`Suite "${suite.name}" has an invalid schedule "${expr}":`, e.message);
       continue;
@@ -465,10 +470,20 @@ async function runScheduledSuites() {
           ? [suite.setupComponentId]
           : [];
     const teardownIds = Array.isArray(suite.teardownComponentIds) ? suite.teardownComponentIds : [];
+    // One id per suite occurrence so its runs roll up to a single result, just
+    // like a manual "Run suite". A test shared by two due suites keeps the
+    // first suite's grouping.
+    const suiteRunId = randomUUID();
     (suite.testIds || []).forEach((id) => {
       dueTestIds.add(id);
-      if (!setupByTest.has(id) && (setupIds.length || teardownIds.length))
-        setupByTest.set(id, { setupComponentIds: setupIds, teardownComponentIds: teardownIds });
+      if (!setupByTest.has(id))
+        setupByTest.set(id, {
+          setupComponentIds: setupIds,
+          teardownComponentIds: teardownIds,
+          suiteId: suite.id,
+          suiteRunId,
+          suiteName: suite.name || '',
+        });
     });
     ranSuites.push({ id: suite.id, name: suite.name, occurrence: prev });
   }

@@ -75,6 +75,15 @@ export default function RunDetail() {
           </Link>
         </div>
         <div className="flex gap-2">
+          {run.testId && (
+            <Link
+              to={`/tests/${run.testId}`}
+              className="btn-ghost py-1.5 px-3 text-xs"
+              title="Open this test in the editor"
+            >
+              ✎ Edit this test
+            </Link>
+          )}
           {failed && (
             <button onClick={() => setBugOpen(true)} className="btn-ghost py-1.5 px-3 text-xs">
               Create bug report

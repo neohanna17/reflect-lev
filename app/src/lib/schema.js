@@ -65,6 +65,11 @@ export function emptyStep(type = 'click') {
   };
 }
 
+// True for component names that look like a login/sign-in step. Used to
+// auto-seed new tests with the login component and to offer a quick
+// "add login first" button.
+export const isLoginComponentName = (name) => /(log|sign)[\s-]*in/i.test(name || '');
+
 export function cryptoId() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
   return 'id-' + Math.random().toString(36).slice(2, 10);

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { STEP_TYPES, stepLabel, emptyStep, cryptoId } from '../lib/schema';
+import { useEffect, useRef, useState } from 'react';
+import { STEP_TYPES, stepLabel, emptyStep, cryptoId, isLoginComponentName } from '../lib/schema';
 import { useDragSort, moveItem } from '../lib/useDragSort';
 
 // Ordered, editable step list. Used by both the test editor and the reusable
@@ -16,6 +16,8 @@ export default function StepsEditor({
   // `editing` holds the id of the open step (not its index) so it stays
   // attached to the right step after a drag-reorder.
   const [editing, setEditing] = useState(null);
+  const [justAddedId, setJustAddedId] = useState(null);
+  const olRef = useRef(null);
   const list = steps || [];
   const toggle = (sid) => setEditing((cur) => (cur === sid ? null : sid));
 
@@ -23,19 +25,51 @@ export default function StepsEditor({
     onChange(moveItem(list, from, to)),
   );
 
+  // A new step is appended at the bottom — scroll it into view and open it so
+  // it's obvious where it landed (and the "Move to top" button is right there).
+  useEffect(() => {
+    if (!justAddedId || !olRef.current) return;
+    const el = olRef.current.querySelector(`[data-step-id="${justAddedId}"]`);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setJustAddedId(null);
+  }, [justAddedId]);
+
   const updateStep = (i, patch) =>
     onChange(list.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
+  const openNew = (s) => {
+    setEditing(s.id);
+    setJustAddedId(s.id);
+  };
   const addStep = () => {
     const s = emptyStep();
     onChange([...list, s]);
-    setEditing(s.id); // open the new step so it's ready to fill in
+    openNew(s); // open + scroll to the new step
   };
   const addComponent = () => {
     const s = { id: cryptoId(), type: 'component', componentId: '', componentName: '', selectors: [] };
     onChange([...list, s]);
-    setEditing(s.id); // open the new step so they can pick which component
+    openNew(s); // open so they can pick which component
   };
   const removeStep = (i) => onChange(list.filter((_, idx) => idx !== i));
+  const moveToTop = (i) => onChange(moveItem(list, i, 0));
+
+  // Offer a one-click "login as step 1" when a login component exists and the
+  // first step isn't already it.
+  const loginComp = components.find((c) => isLoginComponentName(c.name));
+  const hasLoginFirst =
+    list[0]?.type === 'component' && list[0]?.componentId === loginComp?.id;
+  const addLoginFirst = () => {
+    if (!loginComp) return;
+    const s = {
+      id: cryptoId(),
+      type: 'component',
+      componentId: loginComp.id,
+      componentName: loginComp.name,
+      selectors: [],
+    };
+    onChange([s, ...list]);
+    setEditing(s.id);
+  };
 
   const labelFor = (step) => {
     if (step.type === 'component') {
@@ -54,6 +88,15 @@ export default function StepsEditor({
           Steps ({list.length})
         </h2>
         <div className="flex gap-2">
+          {allowComponents && loginComp && !hasLoginFirst && (
+            <button
+              onClick={addLoginFirst}
+              className="btn-ghost py-1 px-2.5 text-xs"
+              title={`Insert "${loginComp.name}" as the first step so the test starts logged in`}
+            >
+              + Login as step 1
+            </button>
+          )}
           {allowComponents && (
             <button
               onClick={addComponent}
@@ -73,7 +116,7 @@ export default function StepsEditor({
           No steps. Record with the extension or add steps manually.
         </div>
       )}
-      <ol className="space-y-2">
+      <ol className="space-y-2" ref={olRef}>
         {list.map((step, i) => {
           const open = editing === step.id;
           const isDragging = dragIndex === i;
@@ -81,6 +124,7 @@ export default function StepsEditor({
           return (
             <li
               key={step.id || i}
+              data-step-id={step.id}
               {...itemProps(i)}
               className={`card overflow-hidden transition ${isDragging ? 'opacity-40' : ''} ${
                 isOver ? 'ring-2 ring-brand' : ''
@@ -116,6 +160,15 @@ export default function StepsEditor({
                   </span>
                 </button>
                 <div className="flex items-center gap-1">
+                  {i > 0 && (
+                    <button
+                      onClick={() => moveToTop(i)}
+                      className="rounded-md px-1.5 py-0.5 text-xs text-gray-400 hover:bg-ink-700 hover:text-gray-800"
+                      title="Move this step to the top"
+                    >
+                      ⤒ top
+                    </button>
+                  )}
                   {onRunUntil && (
                     <button
                       onClick={() => onRunUntil(i)}

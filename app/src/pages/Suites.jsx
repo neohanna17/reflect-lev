@@ -38,6 +38,7 @@ function latestSuiteRun(suiteId, runs) {
 import {
   FREQUENCIES,
   WEEKDAYS,
+  TIMEZONES,
   defaultSpec,
   buildCron,
   describeSchedule,
@@ -503,15 +504,28 @@ function TestPicker({ tests, selected, orderedIds, onToggle, onBulk, onReorder }
 function SchedulePicker({ suite }) {
   const [spec, setSpec] = useState({ ...defaultSpec(), ...(suite.scheduleSpec || {}) });
 
-  // Persist both the structured spec (to repopulate this UI) and the UTC cron
-  // string the runner evaluates.
+  // Persist the structured spec (to repopulate this UI), the cron string, and
+  // the timezone the runner evaluates that cron in.
   function apply(patch) {
     const next = { ...spec, ...patch };
     setSpec(next);
-    saveSuite(suite.id, { scheduleSpec: next, schedule: buildCron(next) });
+    saveSuite(suite.id, {
+      scheduleSpec: next,
+      schedule: buildCron(next),
+      scheduleTz: next.tz || 'UTC',
+    });
   }
 
   const needsTime = ['daily', 'weekdays', 'weekly'].includes(spec.freq);
+
+  // The viewer's own timezone, added to the list if it's not already there.
+  const tzOptions = useMemo(() => {
+    const local = localTzLabel();
+    const has = TIMEZONES.some((t) => t.value === local);
+    return has || local === 'your local time'
+      ? TIMEZONES
+      : [{ value: local, label: `Your computer — ${local}` }, ...TIMEZONES];
+  }, []);
 
   return (
     <div className="rounded-lg border border-ink-600 bg-white p-3" data-tour="suite-schedule">
@@ -573,11 +587,28 @@ function SchedulePicker({ suite }) {
             />
           </div>
         )}
+
+        {needsTime && (
+          <div>
+            <label className="label">Timezone</label>
+            <select
+              className="input max-w-[280px]"
+              value={spec.tz || 'Europe/Berlin'}
+              onChange={(e) => apply({ tz: e.target.value })}
+            >
+              {tzOptions.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       <p className="mt-2 text-xs text-gray-500">
         {describeSchedule(spec)}
-        {spec.freq !== 'manual' && ` · times shown in ${localTzLabel()}; scheduled runs fire within the hour.`}
+        {spec.freq !== 'manual' && ' · scheduled runs fire within the hour.'}
       </p>
     </div>
   );

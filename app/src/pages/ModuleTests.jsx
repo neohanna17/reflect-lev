@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { watchTests, watchRecentRuns, createTest } from '../lib/db';
+import { watchTests, watchRecentRuns, createTest, getLoginComponent } from '../lib/db';
 import { triggerRun } from '../lib/triggerRun';
 import { useAuth } from '../context/AuthContext';
 import StatusBadge from '../components/StatusBadge';
 import Spinner from '../components/Spinner';
 import { timeAgo } from '../lib/format';
-import { moduleOf } from '../lib/schema';
+import { moduleOf, cryptoId } from '../lib/schema';
 
 export default function ModuleTests() {
   const { name } = useParams();
@@ -32,11 +32,27 @@ export default function ModuleTests() {
   const lastRunFor = (testId) => runs.find((r) => r.testId === testId);
 
   async function handleNew() {
+    // Seed every new test with the login component as step 1 (if one exists),
+    // so tests start already authenticated. It's a normal step — delete it if
+    // a particular test shouldn't log in.
+    const login = await getLoginComponent().catch(() => null);
+    const steps = login
+      ? [
+          {
+            id: cryptoId(),
+            type: 'component',
+            componentId: login.id,
+            componentName: login.name || 'Login',
+            selectors: [],
+          },
+        ]
+      : [];
     const id = await createTest({
       name: 'New test',
       module: moduleName === 'Uncategorized' ? '' : moduleName,
       startUrl: import.meta.env.VITE_DEFAULT_BASE_URL || '',
       createdBy: user?.email || null,
+      steps,
     });
     navigate(`/tests/${id}`);
   }
