@@ -273,8 +273,10 @@ export default function ProductTour() {
       await prepareStep(STEPS[idx]);
       d.moveTo(idx);
     });
-    // Put the menu on the left of the footer, before the prev/next buttons.
-    popover.footerButtons.insertBefore(select, popover.footerButtons.firstChild);
+    // Put the menu on its own full-width row at the top of the footer, above
+    // the progress text and the prev/next buttons (styled in index.css).
+    const footer = popover.footerButtons.parentElement || popover.footerButtons;
+    footer.insertBefore(select, footer.firstChild);
   }, [prepareStep]);
 
   const start = useCallback(
