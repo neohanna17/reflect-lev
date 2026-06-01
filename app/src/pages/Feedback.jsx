@@ -165,6 +165,43 @@ export default function Feedback() {
 function FeedbackCard({ item }) {
   const status = STATUSES.find((s) => s.value === item.status) || STATUSES[0];
 
+  // Admin edits: rework the description, or leave a note (e.g. why it was
+  // marked done / what changed). Both persist to Firestore.
+  const [editingDetails, setEditingDetails] = useState(false);
+  const [draftDetails, setDraftDetails] = useState(item.details || '');
+  const [commenting, setCommenting] = useState(false);
+  const [draftComment, setDraftComment] = useState(item.comment || '');
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  async function saveDetails() {
+    setSavingEdit(true);
+    try {
+      await saveFeedback(item.id, { details: draftDetails.trim() });
+      setEditingDetails(false);
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
+  async function saveComment() {
+    setSavingEdit(true);
+    try {
+      const comment = draftComment.trim();
+      await saveFeedback(item.id, { comment });
+      setCommenting(false);
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
+  async function setStatus(value) {
+    if (item.status === value) return;
+    await saveFeedback(item.id, { status: value });
+    // Ping the requester on Discord the moment it's marked Done, including any
+    // admin comment so they know what shipped / why.
+    if (value === 'done') notifyFeedbackDone({ ...item, comment: draftComment.trim() || item.comment || '' });
+  }
+
   return (
     <div className={`card p-4 ${item.status === 'done' ? 'opacity-70' : ''}`}>
       <div className="flex flex-wrap items-center gap-2">
@@ -182,8 +219,72 @@ function FeedbackCard({ item }) {
       <div className={`mt-2 font-medium ${item.status === 'done' ? 'line-through' : ''}`}>
         {item.title}
       </div>
-      {item.details && (
-        <p className="mt-1 whitespace-pre-wrap text-sm text-gray-600">{item.details}</p>
+
+      {editingDetails ? (
+        <div className="mt-2 space-y-2">
+          <textarea
+            className="input"
+            rows={3}
+            value={draftDetails}
+            onChange={(e) => setDraftDetails(e.target.value)}
+            placeholder="Description…"
+          />
+          <div className="flex gap-2">
+            <button onClick={saveDetails} disabled={savingEdit} className="btn-primary py-1 px-3 text-xs">
+              {savingEdit ? 'Saving…' : 'Save description'}
+            </button>
+            <button
+              onClick={() => {
+                setDraftDetails(item.details || '');
+                setEditingDetails(false);
+              }}
+              className="btn-ghost py-1 px-3 text-xs"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        item.details && (
+          <p className="mt-1 whitespace-pre-wrap text-sm text-gray-600">{item.details}</p>
+        )
+      )}
+
+      {/* Admin comment / note */}
+      {commenting ? (
+        <div className="mt-3 space-y-2">
+          <label className="label">Comment</label>
+          <textarea
+            className="input"
+            rows={2}
+            value={draftComment}
+            onChange={(e) => setDraftComment(e.target.value)}
+            placeholder="Add a note — e.g. what changed, or why this is done."
+          />
+          <div className="flex gap-2">
+            <button onClick={saveComment} disabled={savingEdit} className="btn-primary py-1 px-3 text-xs">
+              {savingEdit ? 'Saving…' : 'Save comment'}
+            </button>
+            <button
+              onClick={() => {
+                setDraftComment(item.comment || '');
+                setCommenting(false);
+              }}
+              className="btn-ghost py-1 px-3 text-xs"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        item.comment && (
+          <div className="mt-3 rounded-lg border border-ink-600 bg-ink-700/40 px-3 py-2">
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+              Admin note
+            </div>
+            <p className="mt-0.5 whitespace-pre-wrap text-sm text-gray-700">{item.comment}</p>
+          </div>
+        )
       )}
 
       <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-ink-600 pt-3">
@@ -191,12 +292,7 @@ function FeedbackCard({ item }) {
         {STATUSES.map((s) => (
           <button
             key={s.value}
-            onClick={() => {
-              if (item.status === s.value) return;
-              saveFeedback(item.id, { status: s.value });
-              // Ping the requester on Discord the moment it's marked Done.
-              if (s.value === 'done') notifyFeedbackDone(item);
-            }}
+            onClick={() => setStatus(s.value)}
             className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
               item.status === s.value
                 ? s.cls
@@ -206,6 +302,28 @@ function FeedbackCard({ item }) {
             {s.label}
           </button>
         ))}
+        {!editingDetails && (
+          <button
+            onClick={() => {
+              setDraftDetails(item.details || '');
+              setEditingDetails(true);
+            }}
+            className="rounded-md px-2.5 py-1 text-xs text-gray-500 hover:bg-ink-700 hover:text-gray-800"
+          >
+            Edit description
+          </button>
+        )}
+        {!commenting && (
+          <button
+            onClick={() => {
+              setDraftComment(item.comment || '');
+              setCommenting(true);
+            }}
+            className="rounded-md px-2.5 py-1 text-xs text-gray-500 hover:bg-ink-700 hover:text-gray-800"
+          >
+            {item.comment ? 'Edit comment' : 'Add comment'}
+          </button>
+        )}
         <button
           onClick={() => confirm('Delete this feedback?') && deleteFeedback(item.id)}
           className="ml-auto rounded-md px-2.5 py-1 text-xs text-gray-400 hover:bg-red-500/10 hover:text-red-600"

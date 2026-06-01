@@ -270,6 +270,7 @@ export function notifyFeedbackDone(item) {
     title: item?.title || '',
     category: item?.category || 'Feature request',
     details: item?.details || '',
+    comment: item?.comment || '',
   });
 }
 

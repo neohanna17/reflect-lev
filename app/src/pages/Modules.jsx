@@ -168,7 +168,12 @@ export default function Modules() {
           let passed = 0;
           let failed = 0;
           let never = 0;
+          let needsSteps = 0;
           for (const t of list) {
+            if ((t.steps?.length || 0) === 0) {
+              needsSteps += 1;
+              continue;
+            }
             const last = lastRunFor(t.id);
             if (!last) never += 1;
             else if (last.status === 'passed') passed += 1;
@@ -208,6 +213,11 @@ export default function Modules() {
                 {never > 0 && (
                   <span className="rounded-full bg-ink-700 px-2 py-0.5 text-gray-500">
                     {never} not run
+                  </span>
+                )}
+                {needsSteps > 0 && (
+                  <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-amber-700">
+                    {needsSteps} need steps
                   </span>
                 )}
               </div>

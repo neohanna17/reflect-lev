@@ -118,6 +118,7 @@ export default function ModuleTests() {
         <div className="card mt-6 divide-y divide-ink-600">
           {inModule.map((t) => {
             const last = lastRunFor(t.id);
+            const noSteps = (t.steps?.length || 0) === 0;
             return (
               <Link
                 key={t.id}
@@ -133,7 +134,11 @@ export default function ModuleTests() {
                     {t.startUrl || 'no start URL'} · {t.steps?.length || 0} steps
                   </div>
                 </div>
-                {last ? (
+                {noSteps ? (
+                  <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-700">
+                    Add steps
+                  </span>
+                ) : last ? (
                   <div className="flex items-center gap-3">
                     <span className="hidden text-xs text-gray-500 sm:inline">
                       {timeAgo(last.startedAt)}
