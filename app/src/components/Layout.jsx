@@ -11,6 +11,7 @@ const navItems = [
   { to: '/reports', label: 'Reports', tour: 'nav-reports' },
   { to: '/guide', label: 'Guide', tour: 'nav-guide' },
   { to: '/tech', label: 'Tech guide', tour: 'nav-tech' },
+  { to: '/feedback', label: 'Feature feedback', tour: 'nav-feedback' },
 ];
 
 export default function Layout({ children }) {

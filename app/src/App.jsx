@@ -14,6 +14,7 @@ import Components from './pages/Components';
 import Reports from './pages/Reports';
 import Guide from './pages/Guide';
 import TechGuide from './pages/TechGuide';
+import Feedback from './pages/Feedback';
 
 export default function App() {
   const { user, member, loading } = useAuth();
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="/reports" element={<Reports />} />
         <Route path="/guide" element={<Guide />} />
         <Route path="/tech" element={<TechGuide />} />
+        <Route path="/feedback" element={<Feedback />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

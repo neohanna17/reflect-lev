@@ -195,4 +195,35 @@ export async function deleteComponent(id) {
   await deleteDoc(doc(db, 'components', id));
 }
 
+// ---- Feature feedback ----
+// Notes / feature requests / change requests colleagues leave for the admin to
+// act on. Newest first.
+
+export function watchFeedback(cb) {
+  const q = query(collection(db, 'feedback'), orderBy('createdAt', 'desc'));
+  return onSnapshot(q, (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }))));
+}
+
+export async function createFeedback(data) {
+  const ref = await addDoc(collection(db, 'feedback'), {
+    title: data.title || '',
+    category: data.category || 'Feature request',
+    details: data.details || '',
+    status: 'new',
+    authorEmail: data.authorEmail || null,
+    authorName: data.authorName || null,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+export async function saveFeedback(id, data) {
+  await updateDoc(doc(db, 'feedback', id), { ...data, updatedAt: serverTimestamp() });
+}
+
+export async function deleteFeedback(id) {
+  await deleteDoc(doc(db, 'feedback', id));
+}
+
 export { doc, setDoc };

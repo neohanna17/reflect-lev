@@ -47,5 +47,10 @@ service cloud.firestore {
     match /components/{componentId} {
       allow read, create, update, delete: if isMember();
     }
+
+    // Feature feedback = notes / requests members leave for the admin.
+    match /feedback/{feedbackId} {
+      allow read, create, update, delete: if isMember();
+    }
   }
 }

@@ -86,6 +86,15 @@ const STEPS = [
     },
   },
   {
+    element: '[data-tour="nav-feedback"]',
+    menu: 'Sidebar · Feature feedback',
+    popover: {
+      title: 'Feature feedback',
+      description: 'Leave a note, feature request or change you’d like — the admin reviews these and marks them planned or done.',
+      side: 'right',
+    },
+  },
+  {
     element: '[data-tour="nav-signout"]',
     menu: 'Sidebar · Sign out',
     popover: { title: 'Sign out', description: 'Leave the dashboard. Access is members-only.', side: 'right' },
