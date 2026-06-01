@@ -12,6 +12,8 @@ import {
 } from '../lib/db';
 import { triggerRun } from '../lib/triggerRun';
 import { DEFAULT_MODULES, moduleOf } from '../lib/schema';
+import { useAuth } from '../context/AuthContext';
+import { useActiveViewers } from '../lib/usePresence';
 import StatusBadge from '../components/StatusBadge';
 import Spinner from '../components/Spinner';
 import StepsEditor from '../components/StepsEditor';
@@ -34,6 +36,7 @@ function snapshot(test) {
 export default function TestDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [test, setTest] = useState(null);
   const [runs, setRuns] = useState([]);
   const [components, setComponents] = useState([]);
@@ -42,7 +45,15 @@ export default function TestDetail() {
   // (including step edits) persist automatically a moment after you stop.
   const [saveState, setSaveState] = useState('saved');
   const [running, setRunning] = useState(false);
+  const [editAnyway, setEditAnyway] = useState(false); // override the soft lock
   const freshLoad = useRef(true); // skip auto-save right after (re)loading a test
+
+  // Who else is on this exact test right now (so two people don't clobber each
+  // other's edits), and whether a run is currently in progress for it.
+  const viewers = useActiveViewers(user);
+  const othersHere = viewers.filter((p) => (p.path || '') === `/tests/${id}`);
+  const activeRun = runs.find((r) => r.status === 'running' || r.status === 'queued');
+  const locked = othersHere.length > 0 && !editAnyway;
 
   useEffect(() => {
     freshLoad.current = true;
@@ -88,6 +99,7 @@ export default function TestDetail() {
   if (!test) return <Spinner label="Loading test…" />;
 
   const update = (patch) => {
+    if (locked) return; // someone else is editing this test — don't clobber
     setTest((t) => ({ ...t, ...patch }));
     setSaveState('unsaved');
   };
@@ -160,7 +172,52 @@ export default function TestDetail() {
         <span className="text-gray-700">{test.name}</span>
       </div>
 
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      {/* Conflict warning: someone else is on this exact test right now. */}
+      {othersHere.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-800">
+          <span className="text-lg leading-none">⚠️</span>
+          <span className="flex-1">
+            <span className="font-semibold">
+              {othersHere.map((p) => p.name || p.email).join(', ')}
+            </span>{' '}
+            {othersHere.length === 1 ? 'is' : 'are'} also on this test right now.
+            {locked
+              ? ' Editing is locked so you don’t overwrite each other.'
+              : ' You chose to edit anyway — your changes may overwrite theirs.'}
+          </span>
+          {locked ? (
+            <button onClick={() => setEditAnyway(true)} className="btn-ghost py-1 px-3 text-xs">
+              Edit anyway
+            </button>
+          ) : (
+            <button onClick={() => setEditAnyway(false)} className="btn-ghost py-1 px-3 text-xs">
+              Re-lock
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* A run is currently executing for this test. */}
+      {activeRun && (
+        <div className="mb-4 flex items-center gap-3 rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-2.5 text-sm text-blue-700">
+          <span className="h-3 w-3 animate-spin rounded-full border-2 border-blue-300/40 border-t-blue-400" />
+          <span className="flex-1">
+            A run is in progress for this test
+            {activeRun.triggeredBy ? ` (started by ${activeRun.triggeredBy})` : ''} — editing now may
+            not match what’s running.
+          </span>
+          <Link to={`/runs/${activeRun.id}`} className="btn-ghost py-1 px-3 text-xs">
+            View run
+          </Link>
+        </div>
+      )}
+
+      <div
+        className={`flex flex-wrap items-start justify-between gap-3 ${
+          locked ? 'pointer-events-none select-none opacity-60' : ''
+        }`}
+        aria-disabled={locked}
+      >
         <div className="flex-1 space-y-3">
           <input
             className="input text-lg font-semibold"
@@ -238,7 +295,13 @@ export default function TestDetail() {
 
       <div className="mt-8 grid gap-6 lg:grid-cols-3">
         {/* Steps */}
-        <section className="lg:col-span-2" data-tour="test-steps">
+        <section
+          className={`lg:col-span-2 ${
+            locked ? 'pointer-events-none select-none opacity-60' : ''
+          }`}
+          aria-disabled={locked}
+          data-tour="test-steps"
+        >
           <StepsEditor
             steps={test.steps}
             onChange={(steps) => update({ steps })}
