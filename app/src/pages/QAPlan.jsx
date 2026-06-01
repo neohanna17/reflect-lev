@@ -18,7 +18,7 @@ const STATUSES = [
   },
   {
     value: 'bugs_found',
-    label: 'Bugs found',
+    label: 'Failed',
     chip: 'bg-red-500/10 text-red-700 ring-1 ring-red-400/40',
     active: 'bg-red-600 text-white',
     dot: 'bg-red-500',
@@ -113,7 +113,7 @@ export default function QAPlan() {
           </div>
           <p className="text-sm text-gray-500">
             LevCharity 2.0 manual test plan — {QA_PLAN.length} modules ·{' '}
-            {overall.total} tasks. Mark each as <b>In testing</b>, <b>Bugs found</b>, or{' '}
+            {overall.total} tasks. Mark each as <b>In testing</b>, <b>Failed</b>, or{' '}
             <b>Passed</b>.
           </p>
         </div>
@@ -132,7 +132,7 @@ export default function QAPlan() {
         </div>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Stat label="Pass rate" value={`${pct(overall.passed, overall.total)}%`} sub={`${overall.passed} passed`} tone="text-green-600" />
-          <Stat label="Fail rate" value={`${pct(overall.bugs_found, overall.total)}%`} sub={`${overall.bugs_found} bugs found`} tone="text-red-600" />
+          <Stat label="Fail rate" value={`${pct(overall.bugs_found, overall.total)}%`} sub={`${overall.bugs_found} failed`} tone="text-red-600" />
           <Stat label="In testing" value={`${overall.in_testing}`} sub="not yet resolved" tone="text-gray-600" />
           <Stat label="Total tasks" value={`${overall.total}`} sub={`${QA_PLAN.length} modules`} tone="text-gray-800" />
         </div>
@@ -210,7 +210,7 @@ function ModuleDetail({ module, counts, statusMap, filter, setFilter, onBack, on
   const FILTERS = [
     { value: 'all', label: `All (${counts.total})` },
     { value: 'in_testing', label: `In testing (${counts.in_testing})` },
-    { value: 'bugs_found', label: `Bugs found (${counts.bugs_found})` },
+    { value: 'bugs_found', label: `Failed (${counts.bugs_found})` },
     { value: 'passed', label: `Passed (${counts.passed})` },
   ];
 
