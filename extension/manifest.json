@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Lev.Charity QA",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Record clicks, typing and assertions on lev.charity and turn them into replayable QA tests.",
   "permissions": ["activeTab", "scripting", "storage", "tabs"],
   "host_permissions": ["http://*/*", "https://*/*"],
@@ -12,7 +12,6 @@
     "default_popup": "popup.html",
     "default_title": "Lev.Charity QA"
   },
-  "options_page": "options.html",
   "content_scripts": [
     {
       "matches": ["http://*/*", "https://*/*"],

@@ -2,6 +2,10 @@ const $ = (id) => document.getElementById(id);
 const send = (msg) => chrome.runtime.sendMessage(msg);
 const ask = (msg) => new Promise((res) => chrome.runtime.sendMessage(msg, res));
 
+// Fixed production dashboard. Baked in so colleagues who install the extension
+// can't point it elsewhere and don't need to configure anything.
+const DASHBOARD_URL = 'https://lev-charity.netlify.app';
+
 function stepLabel(s) {
   const t = s.target?.label || (s.selectors && s.selectors[0]) || '';
   switch (s.type) {
@@ -33,8 +37,6 @@ async function render() {
     $('steps').innerHTML = state.steps
       .map((s, i) => `<div class="step">${i + 1}. ${escapeHtml(stepLabel(s))}</div>`)
       .join('');
-    const { rl_dashboard_url } = await chrome.storage.local.get('rl_dashboard_url');
-    $('noDash').classList.toggle('hidden', !!rl_dashboard_url);
   }
 }
 
@@ -66,16 +68,11 @@ $('stop').onclick = async () => {
 };
 
 async function sendToDashboard(kind) {
-  const { rl_dashboard_url } = await chrome.storage.local.get('rl_dashboard_url');
-  if (!rl_dashboard_url) {
-    $('noDash').classList.remove('hidden');
-    return;
-  }
   const test = await buildTest();
   if (kind) test.kind = kind; // 'component' → imported as a reusable component
   if (test.module) await chrome.storage.local.set({ rl_last_module: test.module });
   const payload = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(test)))));
-  const url = rl_dashboard_url.replace(/\/+$/, '') + '/#import=' + payload;
+  const url = DASHBOARD_URL.replace(/\/+$/, '') + '/#import=' + payload;
   chrome.tabs.create({ url });
   await ask({ type: 'CLEAR' });
   window.close();
@@ -105,11 +102,6 @@ $('discard').onclick = async () => {
     await ask({ type: 'CLEAR' });
     render();
   }
-};
-
-$('opts').onclick = $('optsLink').onclick = (e) => {
-  e.preventDefault();
-  chrome.runtime.openOptionsPage();
 };
 
 render();
