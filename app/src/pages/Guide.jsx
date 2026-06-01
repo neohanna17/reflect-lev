@@ -65,10 +65,10 @@ const SECTIONS = [
           </li>
         </ol>
         <p>
-          <strong>One-time setup:</strong> click the extension icon →{' '}
-          <strong>Settings</strong>, and set the <strong>Dashboard URL</strong> to{' '}
-          <code>https://lev-charity.netlify.app</code>. This is how “Send to dashboard”
-          knows where your recordings should land (saved under your signed-in account).
+          <strong>Nothing to configure:</strong> the dashboard address
+          (<code>https://lev-charity.netlify.app</code>) is baked into the extension, so
+          “Send to dashboard” always lands here — there are no settings for colleagues to
+          set or get wrong. Your recordings save under whichever account is signed in here.
         </p>
       </>
     ),
@@ -124,8 +124,93 @@ const SECTIONS = [
     ),
   },
   {
+    id: 'asserts',
+    title: '3 · Assertions — make a test check, not just click',
+    summary: 'The part of a test that actually catches bugs.',
+    body: (
+      <>
+        <p>
+          <strong>Why assertions matter:</strong> without them, a test just repeats your
+          clicks — and a click always “works” even when nothing happens behind it. The button
+          exists, the click lands, the test moves on with a green tick… even if the donation
+          silently failed and no confirmation ever appeared. A click-only test answers{' '}
+          <em>“can I press the buttons?”</em> — but what you actually care about is{' '}
+          <em>“did the donation go through?”</em>
+        </p>
+        <p>
+          An <strong>assertion</strong> is the moment a test stops and checks that the right
+          outcome really happened, not just that you clicked. It’s the line that turns a test
+          red when something’s broken. As a rule, every test should end with at least one
+          assertion — the clicks are <em>how you get there</em>; the assertion is{' '}
+          <em>the actual question the test is asking</em>.
+        </p>
+        <p>There are two kinds:</p>
+        <ul>
+          <li>
+            <strong>Assert text</strong> — checks that specific words appear on the page. Use
+            it when the <strong>content</strong> is the point: a “Donation successful” banner,
+            a total of “R 1,250.00”, a confirmation message.
+          </li>
+          <li>
+            <strong>Assert visible</strong> — checks that a specific element shows up,
+            regardless of its words. Use it when the <strong>presence</strong> is the point but
+            the text changes or doesn’t matter: an icon, an image, a “Download receipt” button.
+          </li>
+        </ul>
+        <p>
+          <strong>How to add one while recording:</strong>
+        </p>
+        <ol>
+          <li>
+            In the floating recorder toolbar (bottom-right of the page), click{' '}
+            <strong>Assert text</strong> or <strong>Assert visible</strong>. The toolbar
+            switches to “Pick element…”, the dot turns gold, and your cursor becomes a
+            crosshair.
+          </li>
+          <li>Click the thing on the page you want to check.</li>
+          <li>
+            It flashes green, the assertion is saved, and recording carries on as normal. That
+            click is “used up” by the recorder, so it won’t accidentally trigger the button or
+            link you clicked on.
+          </li>
+        </ol>
+        <p>
+          <strong>What each one captures:</strong> Assert text grabs the words inside the
+          element you clicked (trimmed, up to 80 characters). Assert visible just remembers
+          which element it was.
+        </p>
+        <p>
+          <strong>How they’re checked when the test runs:</strong>
+        </p>
+        <ul>
+          <li>
+            <strong>Assert text</strong> → the runner waits for any visible element on the page
+            containing that text (a loose match, not exact). Text shows up → pass. Never appears
+            → fail.
+          </li>
+          <li>
+            <strong>Assert visible</strong> → the runner finds the element by its saved
+            selectors. Found and visible → pass. Can’t find it → fail.
+          </li>
+        </ul>
+        <p className="tip">
+          Tip: for Assert text, click the <em>smallest</em> element that wraps just the text you
+          care about. Click a big container and it grabs everything inside (and gets cut off at
+          80 characters), which makes a flakier check.
+        </p>
+        <p>
+          <strong>Example — testing an ecard send:</strong> the clicks pick a card, fill the
+          message, enter the recipient and hit Send (these just drive the flow); then{' '}
+          <strong>Assert text “Your ecard is on its way”</strong> is the real check — if the send
+          broke, that’s the line that turns the test red. Without it, the test would happily pass
+          even if the ecard never sent.
+        </p>
+      </>
+    ),
+  },
+  {
     id: 'edit',
-    title: '3 · Build or edit a test by hand',
+    title: '4 · Build or edit a test by hand',
     summary: 'Add, reorder and fine-tune steps in the editor.',
     body: (
       <>
@@ -163,7 +248,7 @@ const SECTIONS = [
   },
   {
     id: 'components',
-    title: '4 · Reusable components (incl. Log in)',
+    title: '5 · Reusable components (incl. Log in)',
     summary: 'Save a flow once, drop it into many tests.',
     body: (
       <>
@@ -194,7 +279,7 @@ const SECTIONS = [
   },
   {
     id: 'login',
-    title: '5 · Logging in safely',
+    title: '6 · Logging in safely',
     summary: 'Test the real login without exposing your password.',
     body: (
       <>
@@ -225,7 +310,7 @@ const SECTIONS = [
   },
   {
     id: 'run',
-    title: '6 · Run a test',
+    title: '7 · Run a test',
     summary: 'Run the whole thing, or just part of it.',
     body: (
       <>
@@ -253,7 +338,7 @@ const SECTIONS = [
   },
   {
     id: 'results',
-    title: '7 · Read the results',
+    title: '8 · Read the results',
     summary: 'Video, trace, screenshots and self-heal notes.',
     body: (
       <>
@@ -291,7 +376,7 @@ const SECTIONS = [
   },
   {
     id: 'suites',
-    title: '8 · Suites &amp; scheduling',
+    title: '9 · Suites &amp; scheduling',
     summary: 'Group tests and run them automatically.',
     body: (
       <>
@@ -362,7 +447,7 @@ const SECTIONS = [
   },
   {
     id: 'reports',
-    title: '9 · Reports',
+    title: '10 · Reports',
     summary: 'Pass rates, flaky tests and trends.',
     body: (
       <>
@@ -378,7 +463,7 @@ const SECTIONS = [
   },
   {
     id: 'bugs',
-    title: '10 · File a Jira-ready bug',
+    title: '11 · File a Jira-ready bug',
     summary: 'Turn a failure into a ticket in two clicks.',
     body: (
       <>

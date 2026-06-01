@@ -56,6 +56,14 @@ async function stopRecording() {
       /* tab gone */
     }
   }
+  // Pop the toolbar dropdown open onto the review screen so the user lands
+  // straight on naming + module + "Send to dashboard" after pressing Stop on
+  // the on-page toolbar. (No-op when Stop was pressed from inside the popup.)
+  try {
+    await chrome.action.openPopup();
+  } catch {
+    /* openPopup unsupported (older Chrome) or popup already open */
+  }
   return state;
 }
 
