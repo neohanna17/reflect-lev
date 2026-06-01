@@ -262,6 +262,17 @@ async function notifyFeedbackDiscord(payload) {
   }
 }
 
+// Fire a celebratory Discord ping when a feature request is marked Done so the
+// requester knows it shipped. Best-effort — never blocks the status update.
+export function notifyFeedbackDone(item) {
+  notifyFeedbackDiscord({
+    type: 'done',
+    title: item?.title || '',
+    category: item?.category || 'Feature request',
+    details: item?.details || '',
+  });
+}
+
 export async function saveFeedback(id, data) {
   await updateDoc(doc(db, 'feedback', id), { ...data, updatedAt: serverTimestamp() });
 }

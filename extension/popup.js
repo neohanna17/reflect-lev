@@ -44,6 +44,80 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
 
+// ---- Module combobox ----
+// A custom searchable dropdown. The native <datalist> never reliably opened
+// inside the extension popup, so we render and filter the list ourselves.
+const MODULES = [
+  'Ecards', 'Campaigns', 'Donations', 'Page Builder', 'Transactions',
+  'Settings', 'Permissions', 'Widgets', 'My Account', 'Receipts', 'CRM',
+];
+
+function setupModuleCombo() {
+  const input = $('module');
+  const listEl = $('moduleList');
+  if (!input || !listEl) return;
+  let active = -1;
+
+  const visibleOptions = () => {
+    const q = input.value.trim().toLowerCase();
+    const matches = q ? MODULES.filter((m) => m.toLowerCase().includes(q)) : MODULES.slice();
+    const exact = MODULES.some((m) => m.toLowerCase() === q);
+    return { matches, showCreate: q && !exact };
+  };
+
+  const render = () => {
+    const { matches, showCreate } = visibleOptions();
+    if (matches.length === 0 && !showCreate) {
+      listEl.classList.add('hidden');
+      return;
+    }
+    let html = matches
+      .map((m, i) => `<div class="combo-opt${i === active ? ' active' : ''}" data-val="${escapeHtml(m)}">${escapeHtml(m)}</div>`)
+      .join('');
+    if (showCreate) {
+      const v = input.value.trim();
+      html += `<div class="combo-opt create" data-val="${escapeHtml(v)}">Use new module “${escapeHtml(v)}”</div>`;
+    }
+    listEl.innerHTML = html;
+    listEl.classList.remove('hidden');
+  };
+
+  const choose = (val) => {
+    input.value = val;
+    listEl.classList.add('hidden');
+    active = -1;
+  };
+
+  input.addEventListener('focus', () => { active = -1; render(); });
+  input.addEventListener('input', () => { active = -1; render(); });
+  input.addEventListener('keydown', (e) => {
+    const opts = [...listEl.querySelectorAll('.combo-opt')];
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (listEl.classList.contains('hidden')) return render();
+      active = Math.min(active + 1, opts.length - 1);
+      render();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      active = Math.max(active - 1, 0);
+      render();
+    } else if (e.key === 'Enter' && active >= 0 && opts[active]) {
+      e.preventDefault();
+      choose(opts[active].dataset.val);
+    } else if (e.key === 'Escape') {
+      listEl.classList.add('hidden');
+    }
+  });
+  // mousedown (not click) so it fires before the input blur hides the list.
+  listEl.addEventListener('mousedown', (e) => {
+    const opt = e.target.closest('.combo-opt');
+    if (opt) { e.preventDefault(); choose(opt.dataset.val); }
+  });
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.combo')) listEl.classList.add('hidden');
+  });
+}
+
 function buildTest() {
   return new Promise(async (res) => {
     const state = await ask({ type: 'GET_RECORDING' });
@@ -104,4 +178,5 @@ $('discard').onclick = async () => {
   }
 };
 
+setupModuleCombo();
 render();

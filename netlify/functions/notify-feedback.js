@@ -3,8 +3,16 @@
 // server-side so it never ships in the public JS bundle (anyone holding it
 // could spam the channel).
 //
+// Two event types are posted to the same channel:
+//   type:'new'  – someone submitted new feedback (default)
+//   type:'done' – the admin marked a request Done; posts a celebratory ping so
+//                 the requester knows their feature shipped.
+//
 // Required environment variable (set in Netlify > Site settings > Env):
 //   DISCORD_FEEDBACK_WEBHOOK   the full Discord webhook URL
+//   DISCORD_FEEDBACK_MENTION (optional) – who to ping on NEW feedback, e.g. "<@USER_ID>"
+//   DISCORD_DONE_MENTION (optional) – who to ping when a feature is DONE.
+//                       Defaults to Alisa's Discord user id.
 //   FIREBASE_PROJECT_ID (optional) – when set, the caller's Firebase ID token
 //                       is sanity-checked so the endpoint isn't fully open.
 
@@ -80,27 +88,50 @@ export async function handler(event) {
   const category = clip(body.category, 60) || 'Feature request';
   const details = clip(body.details, 1500);
   const who = clip(body.authorName || body.authorEmail || 'Someone', 200);
-  const mention = (process.env.DISCORD_FEEDBACK_MENTION || '').trim();
+  const type = body.type === 'done' ? 'done' : 'new';
 
-  const fields = [{ name: 'Type', value: category, inline: true }, { name: 'From', value: who, inline: true }];
-  if (body.url) fields.push({ name: 'Open', value: clip(body.url, 400), inline: false });
-
-  const payload = {
-    username: 'Lev.Charity QA',
-    // Optional mention so a real Discord ping fires. Set DISCORD_FEEDBACK_MENTION
-    // to "<@USER_ID>" (or "<@&ROLE_ID>"). allowed_mentions lets it resolve.
-    content: `${mention ? mention + ' ' : ''}📋 **New feature feedback**`,
-    allowed_mentions: { parse: ['users', 'roles'] },
-    embeds: [
-      {
-        title,
-        description: details || undefined,
-        color: CATEGORY_COLOR[category] ?? CATEGORY_COLOR.Other,
-        fields,
-        timestamp: new Date().toISOString(),
-      },
-    ],
-  };
+  let payload;
+  if (type === 'done') {
+    // Celebratory "your feature shipped" ping. Defaults to tagging Alisa.
+    const mention = (process.env.DISCORD_DONE_MENTION || '<@1334096973900419072>').trim();
+    payload = {
+      username: 'Lev.Charity QA',
+      content: `${mention} ✅ **This feature has been added for you — go check it, it's done!**`,
+      allowed_mentions: { parse: ['users', 'roles'] },
+      embeds: [
+        {
+          title: `✅ ${title}`,
+          description: details || undefined,
+          color: 0x22c55e, // green
+          fields: [{ name: 'Type', value: category, inline: true }],
+          timestamp: new Date().toISOString(),
+        },
+      ],
+    };
+  } else {
+    const mention = (process.env.DISCORD_FEEDBACK_MENTION || '').trim();
+    const fields = [
+      { name: 'Type', value: category, inline: true },
+      { name: 'From', value: who, inline: true },
+    ];
+    if (body.url) fields.push({ name: 'Open', value: clip(body.url, 400), inline: false });
+    payload = {
+      username: 'Lev.Charity QA',
+      // Optional mention so a real Discord ping fires. Set DISCORD_FEEDBACK_MENTION
+      // to "<@USER_ID>" (or "<@&ROLE_ID>"). allowed_mentions lets it resolve.
+      content: `${mention ? mention + ' ' : ''}📋 **New feature feedback**`,
+      allowed_mentions: { parse: ['users', 'roles'] },
+      embeds: [
+        {
+          title,
+          description: details || undefined,
+          color: CATEGORY_COLOR[category] ?? CATEGORY_COLOR.Other,
+          fields,
+          timestamp: new Date().toISOString(),
+        },
+      ],
+    };
+  }
 
   const res = await fetch(webhook, {
     method: 'POST',

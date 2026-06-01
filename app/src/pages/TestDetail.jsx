@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   getTest,
@@ -6,6 +6,7 @@ import {
   deleteTest,
   watchRunsForTest,
   watchComponents,
+  watchTests,
   createComponent,
   deleteRun,
 } from '../lib/db';
@@ -14,6 +15,7 @@ import { DEFAULT_MODULES, moduleOf } from '../lib/schema';
 import StatusBadge from '../components/StatusBadge';
 import Spinner from '../components/Spinner';
 import StepsEditor from '../components/StepsEditor';
+import ModuleCombobox from '../components/ModuleCombobox';
 import { timeAgo, fmtDuration } from '../lib/format';
 
 // The persisted shape of a test (kept in one place so auto-save and run-flush
@@ -35,6 +37,7 @@ export default function TestDetail() {
   const [test, setTest] = useState(null);
   const [runs, setRuns] = useState([]);
   const [components, setComponents] = useState([]);
+  const [allTests, setAllTests] = useState([]);
   // Auto-save: 'saved' | 'unsaved' | 'saving'. No manual Save button — edits
   // (including step edits) persist automatically a moment after you stop.
   const [saveState, setSaveState] = useState('saved');
@@ -49,11 +52,22 @@ export default function TestDetail() {
     });
     const unsub = watchRunsForTest(id, setRuns);
     const unsubC = watchComponents(setComponents);
+    const unsubT = watchTests(setAllTests);
     return () => {
       unsub();
       unsubC();
+      unsubT();
     };
   }, [id]);
+
+  // Modules already in use across all tests, plus the built-in suggestions.
+  const moduleOptions = useMemo(
+    () =>
+      [...new Set([...DEFAULT_MODULES, ...allTests.map((t) => (t.module || '').trim())])]
+        .filter(Boolean)
+        .sort(),
+    [allTests],
+  );
 
   // Debounced auto-save whenever the test changes.
   useEffect(() => {
@@ -155,18 +169,12 @@ export default function TestDetail() {
           />
           <div>
             <label className="label">Module</label>
-            <input
-              className="input"
-              list="module-options"
-              placeholder="e.g. Ecards, Campaigns, Donations"
+            <ModuleCombobox
               value={test.module || ''}
-              onChange={(e) => update({ module: e.target.value })}
+              onChange={(module) => update({ module })}
+              options={moduleOptions}
+              placeholder="e.g. Ecards, Campaigns, Donations"
             />
-            <datalist id="module-options">
-              {DEFAULT_MODULES.map((m) => (
-                <option key={m} value={m} />
-              ))}
-            </datalist>
           </div>
           <input
             className="input"

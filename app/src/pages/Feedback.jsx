@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { watchFeedback, createFeedback, saveFeedback, deleteFeedback } from '../lib/db';
+import {
+  watchFeedback,
+  createFeedback,
+  saveFeedback,
+  deleteFeedback,
+  notifyFeedbackDone,
+} from '../lib/db';
 import { useAuth } from '../context/AuthContext';
 import Spinner from '../components/Spinner';
 import { timeAgo } from '../lib/format';
@@ -185,7 +191,12 @@ function FeedbackCard({ item }) {
         {STATUSES.map((s) => (
           <button
             key={s.value}
-            onClick={() => item.status !== s.value && saveFeedback(item.id, { status: s.value })}
+            onClick={() => {
+              if (item.status === s.value) return;
+              saveFeedback(item.id, { status: s.value });
+              // Ping the requester on Discord the moment it's marked Done.
+              if (s.value === 'done') notifyFeedbackDone(item);
+            }}
             className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
               item.status === s.value
                 ? s.cls

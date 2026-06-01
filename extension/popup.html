@@ -29,6 +29,16 @@
       a { color: #6d5efc; font-size: 11px; text-decoration: none; }
       .warn { color: #f59e0b; font-size: 11px; margin-top: 8px; }
       .hidden { display: none; }
+      .combo { position: relative; }
+      .combo-list {
+        position: absolute; left: 0; right: 0; top: 100%; z-index: 20;
+        max-height: 168px; overflow: auto; margin-top: 2px;
+        background: #13141b; border: 1px solid #373b4d; border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      }
+      .combo-opt { padding: 7px 10px; font-size: 12px; color: #c7cad6; cursor: pointer; }
+      .combo-opt:hover, .combo-opt.active { background: #6d5efc22; color: #fff; }
+      .combo-opt.create { border-top: 1px solid #262936; color: #8b8fa3; }
     </style>
   </head>
   <body>
@@ -53,20 +63,10 @@
 
       <div id="review" class="hidden">
         <input id="name" placeholder="Test name" />
-        <input id="module" list="modules" placeholder="Module (e.g. Ecards, Campaigns, Donations)" />
-        <datalist id="modules">
-          <option value="Ecards"></option>
-          <option value="Campaigns"></option>
-          <option value="Donations"></option>
-          <option value="Page Builder"></option>
-          <option value="Transactions"></option>
-          <option value="Settings"></option>
-          <option value="Permissions"></option>
-          <option value="Widgets"></option>
-          <option value="My Account"></option>
-          <option value="Receipts"></option>
-          <option value="CRM"></option>
-        </datalist>
+        <div class="combo">
+          <input id="module" autocomplete="off" placeholder="Module (e.g. Ecards, Campaigns, Donations)" />
+          <div id="moduleList" class="combo-list hidden"></div>
+        </div>
         <div id="steps" class="steps"></div>
         <button id="send" class="primary">Send to dashboard →</button>
         <button id="sendComponent" class="ghost" style="width:100%;margin-top:6px">
