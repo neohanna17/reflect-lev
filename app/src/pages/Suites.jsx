@@ -12,7 +12,9 @@ import {
 import { triggerRun } from '../lib/triggerRun';
 import Spinner from '../components/Spinner';
 import StatusBadge from '../components/StatusBadge';
-import { moduleOf, cryptoId } from '../lib/schema';
+import TargetBadge from '../components/TargetBadge';
+import TargetPicker from '../components/TargetPicker';
+import { moduleOf, cryptoId, DEFAULT_TARGET } from '../lib/schema';
 import { timeAgo } from '../lib/format';
 import { useDragSort, moveItem } from '../lib/useDragSort';
 
@@ -82,7 +84,7 @@ export default function Suites() {
     await createSuite({ name: 'New suite' });
   }
 
-  async function runSuite(suite) {
+  async function runSuite(suite, targetIds) {
     setRunning(suite.id);
     try {
       const chosen = tests.filter((t) => (suite.testIds || []).includes(t.id));
@@ -90,15 +92,22 @@ export default function Suites() {
         alert('This suite has no tests yet.');
         return;
       }
-      // One id shared by every run in this launch, so they roll up to a single
-      // suite pass/fail.
+      const browsers = targetIds && targetIds.length ? targetIds : [DEFAULT_TARGET];
+      // One id shared by every run in this launch (across all tests AND all
+      // chosen browsers), so they roll up to a single suite pass/fail.
       const opts = { suiteId: suite.id, suiteRunId: cryptoId(), suiteName: suite.name || '' };
       const sIds = setupIdsOf(suite);
       const tIds = teardownIdsOf(suite);
       if (sIds.length) opts.setupComponentIds = sIds;
       if (tIds.length) opts.teardownComponentIds = tIds;
-      for (const t of chosen) await triggerRun(t, opts);
-      alert(`Queued ${chosen.length} run(s).`);
+      let queued = 0;
+      for (const t of chosen) {
+        for (const target of browsers) {
+          await triggerRun(t, { ...opts, target });
+          queued += 1;
+        }
+      }
+      alert(`Queued ${queued} run(s) across ${browsers.length} browser(s).`);
     } catch (e) {
       alert(e.message);
     } finally {
@@ -132,7 +141,7 @@ export default function Suites() {
             components={components}
             lastRun={latestSuiteRun(s.id, runs)}
             running={running === s.id}
-            onRun={() => runSuite(s)}
+            onRun={(targetIds) => runSuite(s, targetIds)}
             tour={i === 0 ? 'suite-card' : undefined}
           />
         ))}
@@ -144,6 +153,8 @@ export default function Suites() {
 function SuiteCard({ suite, tests, components, lastRun, running, onRun, tour }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(suite.name);
+  // Which browsers/devices to run this suite on. Chrome by default.
+  const [targets, setTargets] = useState([DEFAULT_TARGET]);
 
   const selected = new Set(suite.testIds || []);
   const setupIds = setupIdsOf(suite);
@@ -197,9 +208,14 @@ function SuiteCard({ suite, tests, components, lastRun, running, onRun, tour }) 
             </span>
           </div>
         )}
-        <div className="flex gap-2">
-          <button onClick={onRun} disabled={running} className="btn-primary py-1.5 px-3 text-xs">
-            {running ? 'Queuing…' : '▶ Run suite'}
+        <div className="flex items-center gap-2">
+          <TargetPicker value={targets} onChange={setTargets} disabled={running} />
+          <button
+            onClick={() => onRun(targets)}
+            disabled={running}
+            className="btn-primary py-1.5 px-3 text-xs"
+          >
+            {running ? 'Queuing…' : targets.length > 1 ? `▶ Run on ${targets.length}` : '▶ Run suite'}
           </button>
           <button
             onClick={() => confirm('Delete suite?') && deleteSuite(suite.id)}
@@ -233,6 +249,7 @@ function SuiteCard({ suite, tests, components, lastRun, running, onRun, tour }) 
                     >
                       {r.testName}
                     </Link>
+                    <TargetBadge target={r.target} />
                     <span className="text-xs text-gray-400">{timeAgo(r.startedAt)}</span>
                   </li>
                 ))}

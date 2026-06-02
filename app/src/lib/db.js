@@ -15,7 +15,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
-import { isLoginComponentName } from './schema';
+import { isLoginComponentName, targetById } from './schema';
 
 const FEEDBACK_NOTIFY_URL =
   import.meta.env.VITE_FEEDBACK_NOTIFY_URL || '/.netlify/functions/notify-feedback';
@@ -125,9 +125,14 @@ export async function enqueueRun(test, triggeredBy, opts = {}) {
     suiteId: opts.suiteId || null,
     suiteRunId: opts.suiteRunId || null,
     suiteName: opts.suiteName || null,
+    // Which browser/device to execute on (see TEST_TARGETS in schema.js).
+    // Defaults to Chrome. When a single launch fans out across several targets
+    // they share one batchId so the dashboard can group them.
+    target: opts.target || 'chromium',
+    batchId: opts.batchId || null,
     steps: [],
     durationMs: 0,
-    browser: 'chromium',
+    browser: targetById(opts.target || 'chromium').engine,
     error: null,
   });
   return ref.id;

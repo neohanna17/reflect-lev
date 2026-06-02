@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+import { chromium, webkit, devices } from 'playwright';
 import { FieldValue } from 'firebase-admin/firestore';
 import os from 'node:os';
 import path from 'node:path';
@@ -11,6 +11,24 @@ import { db, bucket } from './firebase-admin.js';
 import { runTest } from './playback.js';
 
 const VIEWPORT = { width: 1280, height: 800 };
+
+// Browser/device presets. Must mirror TEST_TARGETS in app/src/lib/schema.js.
+// `engine` picks the Playwright browser; `device` (optional) pulls a mobile
+// descriptor (viewport, touch, user-agent) from playwright's device registry.
+const TARGETS = {
+  chromium: { engine: 'chromium' },
+  webkit: { engine: 'webkit' },
+  iphone: { engine: 'webkit', device: 'iPhone 13' },
+  pixel: { engine: 'chromium', device: 'Pixel 5' },
+};
+
+function resolveTarget(id) {
+  const t = TARGETS[id] || TARGETS.chromium;
+  const engine = t.engine === 'webkit' ? webkit : chromium;
+  // Fall back gracefully if a device name isn't in this Playwright version.
+  const device = t.device && devices[t.device] ? devices[t.device] : null;
+  return { id: TARGETS[id] ? id : 'chromium', engine, device };
+}
 // Fraction of pixels that must differ before a step is flagged as a visual
 // change. Override with VISUAL_THRESHOLD (e.g. 0.02 = 2%).
 const VISUAL_THRESHOLD = Number(process.env.VISUAL_THRESHOLD) || 0.01;
@@ -38,9 +56,16 @@ const uploadScreenshot = (runId, index, buffer) =>
 // Visual regression: compare a step screenshot against a stored baseline.
 // Returns a result describing the comparison, or null when storage is off.
 // With `update`, the current shot replaces the baseline instead of comparing.
-async function compareVisual({ testId, runId, index, shot, update }) {
+async function compareVisual({ testId, runId, index, shot, update, target }) {
   if (!bucket) return null;
-  const baseFile = bucket.file(`baselines/${testId}/step-${pad(index)}.png`);
+  // Baselines are per-target so a mobile/Safari screenshot is never compared
+  // against the desktop-Chrome baseline. Chrome keeps the original path so
+  // existing baselines stay valid; other targets live under a subfolder.
+  const prefix =
+    !target || target === 'chromium'
+      ? `baselines/${testId}`
+      : `baselines/${testId}/${target}`;
+  const baseFile = bucket.file(`${prefix}/step-${pad(index)}.png`);
 
   if (update) {
     await baseFile.save(shot, { contentType: 'image/png', resumable: false });
@@ -228,12 +253,17 @@ async function executeRun(runId) {
       ` (${effectiveSteps.length} steps) → run ${runId}`,
   );
 
-  const browser = await chromium.launch();
+  const target = resolveTarget(run.target);
+  console.log(`  target: ${target.id}${target.device ? ` (${run.target})` : ''}`);
+  const browser = await target.engine.launch();
   const artifactDir = path.join(os.tmpdir(), `run-${runId}`);
   await fs.mkdir(artifactDir, { recursive: true });
+  // A mobile target brings its own viewport/touch/user-agent via the device
+  // descriptor; desktop targets use the standard viewport.
+  const viewport = target.device?.viewport || VIEWPORT;
   const context = await browser.newContext({
-    viewport: VIEWPORT,
-    recordVideo: { dir: artifactDir, size: VIEWPORT },
+    ...(target.device || { viewport }),
+    recordVideo: { dir: artifactDir, size: viewport },
   });
   await context.tracing.start({ screenshots: true, snapshots: true, sources: false });
   const page = await context.newPage();
@@ -260,6 +290,7 @@ async function executeRun(runId) {
               index,
               shot,
               update: updateBaselines,
+              target: target.id,
             });
           } catch (e) {
             console.warn('visual compare failed:', e.message);
@@ -374,6 +405,10 @@ async function enqueueAndRun(tests, triggeredBy, setupForTest) {
       suiteId: wrap.suiteId || null,
       suiteRunId: wrap.suiteRunId || null,
       suiteName: wrap.suiteName || null,
+      // Scheduled / daily sweeps run on Chrome to keep CI time predictable;
+      // cross-browser matrices are launched on demand from the dashboard.
+      target: wrap.target || 'chromium',
+      batchId: null,
       steps: [],
       durationMs: 0,
       browser: 'chromium',

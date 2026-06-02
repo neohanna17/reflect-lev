@@ -1,5 +1,6 @@
 import { auth } from '../firebase';
 import { enqueueRun } from './db';
+import { cryptoId, DEFAULT_TARGET } from './schema';
 
 const FN_URL = import.meta.env.VITE_TRIGGER_FUNCTION_URL || '/.netlify/functions/trigger-run';
 
@@ -24,4 +25,17 @@ export async function triggerRun(test, opts = {}) {
     throw new Error(`Failed to dispatch run (${res.status}): ${text}`);
   }
   return runId;
+}
+
+// Fan-out: launch the same test on several browsers/devices at once. Each
+// target becomes its own run; when there's more than one they share a batchId
+// so the dashboard can group the matrix together. Returns the new run ids.
+export async function triggerRunTargets(test, targetIds, opts = {}) {
+  const ids = targetIds && targetIds.length ? [...new Set(targetIds)] : [DEFAULT_TARGET];
+  const batchId = ids.length > 1 ? cryptoId() : null;
+  const runIds = [];
+  for (const target of ids) {
+    runIds.push(await triggerRun(test, { ...opts, target, batchId }));
+  }
+  return runIds;
 }

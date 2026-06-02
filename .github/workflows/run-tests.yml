@@ -38,7 +38,9 @@ jobs:
 
       - name: Install Playwright browsers
         working-directory: runner
-        run: npx playwright install --with-deps chromium
+        # chromium + webkit cover all four targets: Chrome & Pixel run on
+        # chromium; Safari & iPhone run on webkit.
+        run: npx playwright install --with-deps chromium webkit
 
       - name: Execute run
         working-directory: runner

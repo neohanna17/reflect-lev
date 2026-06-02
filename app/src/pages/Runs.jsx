@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { watchRecentRuns, watchTests, deleteRun } from '../lib/db';
 import StatusBadge from '../components/StatusBadge';
+import TargetBadge from '../components/TargetBadge';
 import Spinner from '../components/Spinner';
 import { timeAgo, fmtDuration, tsToDate } from '../lib/format';
 import { moduleOf } from '../lib/schema';
@@ -359,9 +360,10 @@ function RunRow({ run, moduleByTest, selected, toggleOne, navigate, nested = fal
         <StatusBadge status={run.status} />
       </td>
       <th scope="row" className="max-w-0 px-2 py-2.5 text-left font-medium">
-        <span className="block truncate">
-          {nested && <span className="mr-1.5 text-brand/40">↳</span>}
-          {run.testName}
+        <span className="flex items-center gap-1.5">
+          {nested && <span className="shrink-0 text-brand/40">↳</span>}
+          <span className="truncate">{run.testName}</span>
+          <TargetBadge target={run.target} className="shrink-0" />
         </span>
       </th>
       <td className="hidden px-2 py-2.5 text-xs text-gray-500 sm:table-cell">

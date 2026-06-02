@@ -37,6 +37,28 @@ export function moduleOf(test) {
   return (test?.module || '').trim() || 'Uncategorized';
 }
 
+// Browsers / devices a test can run on. Each maps to a Playwright engine and,
+// for the mobile presets, a device descriptor. iPhone emulates on WebKit and
+// Pixel on Chromium, so installing chromium + webkit in CI covers all four.
+// Note: mobile here is Playwright *emulation* (viewport, touch, user-agent) —
+// not real Apple/Android hardware (that needs a paid device cloud).
+export const TEST_TARGETS = [
+  { id: 'chromium', label: 'Chrome', short: 'Chrome', engine: 'chromium', icon: '🖥', kind: 'desktop' },
+  { id: 'webkit', label: 'Safari', short: 'Safari', engine: 'webkit', icon: '🧭', kind: 'desktop' },
+  { id: 'iphone', label: 'iPhone', short: 'iPhone', engine: 'webkit', icon: '📱', kind: 'mobile', device: 'iPhone 13' },
+  { id: 'pixel', label: 'Pixel', short: 'Pixel', engine: 'chromium', icon: '📱', kind: 'mobile', device: 'Pixel 5' },
+];
+
+export const DEFAULT_TARGET = 'chromium';
+
+export function targetById(id) {
+  return TEST_TARGETS.find((t) => t.id === id) || TEST_TARGETS[0];
+}
+
+export function targetLabel(id) {
+  return targetById(id).label;
+}
+
 export function stepLabel(step) {
   const def = STEP_TYPES[step.type];
   const base = def ? def.label : step.type;

@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { watchRun, getTest, deleteRun } from '../lib/db';
 import { triggerRun } from '../lib/triggerRun';
 import StatusBadge from '../components/StatusBadge';
+import TargetBadge from '../components/TargetBadge';
 import Spinner from '../components/Spinner';
 import BugReportModal from '../components/BugReportModal';
 import { timeAgo, fmtDuration } from '../lib/format';
@@ -35,6 +36,7 @@ export default function RunDetail() {
       const runId = await triggerRun(test, {
         fromStep: run.fromStep,
         toStep: run.toStep,
+        target: run.target || 'chromium',
         setupComponentIds:
           run.setupComponentIds ||
           (run.setupComponentId ? [run.setupComponentId] : undefined),
@@ -120,8 +122,8 @@ export default function RunDetail() {
           <span className="text-sm">{timeAgo(run.startedAt)}</span>
         </div>
         <div>
-          <div className="label">Browser</div>
-          <span className="text-sm capitalize">{run.browser || 'chromium'}</span>
+          <div className="label">Ran on</div>
+          <TargetBadge target={run.target} />
         </div>
       </div>
 

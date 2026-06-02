@@ -10,11 +10,13 @@ import {
   createComponent,
   deleteRun,
 } from '../lib/db';
-import { triggerRun } from '../lib/triggerRun';
-import { DEFAULT_MODULES, moduleOf } from '../lib/schema';
+import { triggerRun, triggerRunTargets } from '../lib/triggerRun';
+import { DEFAULT_MODULES, DEFAULT_TARGET, moduleOf } from '../lib/schema';
 import { useAuth } from '../context/AuthContext';
 import { useActiveViewers } from '../lib/usePresence';
 import StatusBadge from '../components/StatusBadge';
+import TargetBadge from '../components/TargetBadge';
+import TargetPicker from '../components/TargetPicker';
 import Spinner from '../components/Spinner';
 import StepsEditor from '../components/StepsEditor';
 import ModuleCombobox from '../components/ModuleCombobox';
@@ -45,6 +47,8 @@ export default function TestDetail() {
   // (including step edits) persist automatically a moment after you stop.
   const [saveState, setSaveState] = useState('saved');
   const [running, setRunning] = useState(false);
+  // Which browsers/devices to run on. Chrome by default; tick more to fan out.
+  const [targets, setTargets] = useState([DEFAULT_TARGET]);
   const [editAnyway, setEditAnyway] = useState(false); // override the soft lock
   const freshLoad = useRef(true); // skip auto-save right after (re)loading a test
 
@@ -111,12 +115,24 @@ export default function TestDetail() {
     setSaveState('saved');
   }
 
-  async function handleRun(opts) {
+  async function handleRun(opts = {}) {
     await saveNow();
     setRunning(true);
     try {
-      const runId = await triggerRun(test, opts);
-      navigate(`/runs/${runId}`);
+      // Partial runs (run-from / run-until) and baseline captures are tied to a
+      // single browser, so they use just the first selected target. A normal
+      // "Run test" fans out across every ticked browser/device.
+      const single = opts.updateBaselines || Number.isInteger(opts.fromStep) || Number.isInteger(opts.toStep);
+      const chosen = targets.length ? targets : [DEFAULT_TARGET];
+      if (single) {
+        const runId = await triggerRun(test, { ...opts, target: chosen[0] });
+        navigate(`/runs/${runId}`);
+      } else {
+        const runIds = await triggerRunTargets(test, chosen, opts);
+        // Open the single run directly; for a matrix, go to the Runs list where
+        // the batch shows together.
+        navigate(runIds.length === 1 ? `/runs/${runIds[0]}` : '/runs');
+      }
     } catch (e) {
       alert(e.message);
     } finally {
@@ -248,8 +264,18 @@ export default function TestDetail() {
           />
         </div>
         <div className="flex flex-col gap-2" data-tour="test-actions">
+          <div className="rounded-lg border border-ink-600 bg-white p-2">
+            <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+              Run on
+            </div>
+            <TargetPicker value={targets} onChange={setTargets} disabled={running} />
+          </div>
           <button onClick={() => handleRun()} disabled={running} className="btn-primary">
-            {running ? 'Starting…' : '▶ Run test'}
+            {running
+              ? 'Starting…'
+              : targets.length > 1
+                ? `▶ Run on ${targets.length} browsers`
+                : '▶ Run test'}
           </button>
           <div
             className="flex items-center justify-center gap-1.5 text-xs text-gray-400"
@@ -327,7 +353,10 @@ export default function TestDetail() {
                 className="group flex items-center justify-between px-3 py-2.5 hover:bg-ink-700/50"
               >
                 <Link to={`/runs/${r.id}`} className="min-w-0 flex-1">
-                  <StatusBadge status={r.status} />
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={r.status} />
+                    <TargetBadge target={r.target} />
+                  </div>
                   <div className="mt-1 text-xs text-gray-500">
                     {timeAgo(r.startedAt)} · {fmtDuration(r.durationMs)}
                   </div>
