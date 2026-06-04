@@ -4,6 +4,7 @@ import { watchRun, getTest, deleteRun } from '../lib/db';
 import { triggerRun } from '../lib/triggerRun';
 import StatusBadge from '../components/StatusBadge';
 import TargetBadge from '../components/TargetBadge';
+import DataBadge from '../components/DataBadge';
 import Spinner from '../components/Spinner';
 import BugReportModal from '../components/BugReportModal';
 import { timeAgo, fmtDuration } from '../lib/format';
@@ -37,6 +38,8 @@ export default function RunDetail() {
         fromStep: run.fromStep,
         toStep: run.toStep,
         target: run.target || 'chromium',
+        dataRow: run.dataRow || null,
+        dataLabel: run.dataLabel || null,
         setupComponentIds:
           run.setupComponentIds ||
           (run.setupComponentId ? [run.setupComponentId] : undefined),
@@ -125,6 +128,12 @@ export default function RunDetail() {
           <div className="label">Ran on</div>
           <TargetBadge target={run.target} />
         </div>
+        {run.dataLabel && (
+          <div>
+            <div className="label">Test data</div>
+            <DataBadge label={run.dataLabel} />
+          </div>
+        )}
       </div>
 
       {run.partial && (

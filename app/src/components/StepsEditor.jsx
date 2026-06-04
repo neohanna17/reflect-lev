@@ -265,18 +265,36 @@ function StepEditor({ step, onChange, components, allowComponents }) {
         step.type,
       ) && (
         <div>
-          <label className="label">
-            {step.type === 'navigate' || step.type === 'assertUrl'
-              ? 'URL'
-              : step.type === 'wait'
-                ? 'Milliseconds'
-                : 'Value'}
-          </label>
+          <div className="flex items-center justify-between">
+            <label className="label">
+              {step.type === 'navigate' || step.type === 'assertUrl'
+                ? 'URL'
+                : step.type === 'wait'
+                  ? 'Milliseconds'
+                  : 'Value'}
+            </label>
+            {step.value ? (
+              <button
+                type="button"
+                onClick={() => onChange({ value: '' })}
+                className="text-xs text-gray-400 hover:text-red-600"
+                title="Erase all text from this field"
+              >
+                ✕ Clear
+              </button>
+            ) : null}
+          </div>
           <input
             className="input"
             value={step.value || ''}
             onChange={(e) => onChange({ value: e.target.value })}
           />
+          {step.type !== 'wait' && (
+            <p className="mt-1 text-xs text-gray-500">
+              Tip: use <code>{'{{name}}'}</code> to pull in a value from the test’s data
+              variables (runs once per value).
+            </p>
+          )}
         </div>
       )}
       {['click', 'type', 'select', 'hover', 'assertVisible', 'clear'].includes(step.type) && (
@@ -291,7 +309,19 @@ function StepEditor({ step, onChange, components, allowComponents }) {
             />
           </div>
           <div>
-            <label className="label">Selectors (one per line, tried in order = self-healing)</label>
+            <div className="flex items-center justify-between">
+              <label className="label">Selectors (one per line, tried in order = self-healing)</label>
+              {(step.selectors || []).length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => onChange({ selectors: [] })}
+                  className="text-xs text-gray-400 hover:text-red-600"
+                  title="Erase all selectors from this field"
+                >
+                  ✕ Clear
+                </button>
+              ) : null}
+            </div>
             <textarea
               className="input font-mono text-xs"
               rows={3}

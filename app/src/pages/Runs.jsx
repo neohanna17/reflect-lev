@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { watchRecentRuns, watchTests, deleteRun } from '../lib/db';
 import StatusBadge from '../components/StatusBadge';
 import TargetBadge from '../components/TargetBadge';
+import DataBadge from '../components/DataBadge';
 import Spinner from '../components/Spinner';
 import { timeAgo, fmtDuration, tsToDate } from '../lib/format';
 import { moduleOf } from '../lib/schema';
@@ -364,6 +365,7 @@ function RunRow({ run, moduleByTest, selected, toggleOne, navigate, nested = fal
           {nested && <span className="shrink-0 text-brand/40">↳</span>}
           <span className="truncate">{run.testName}</span>
           <TargetBadge target={run.target} className="shrink-0" />
+          <DataBadge label={run.dataLabel} className="shrink-0 max-w-[160px]" />
         </span>
       </th>
       <td className="hidden px-2 py-2.5 text-xs text-gray-500 sm:table-cell">

@@ -10,15 +10,17 @@ import {
   createComponent,
   deleteRun,
 } from '../lib/db';
-import { triggerRun, triggerRunTargets } from '../lib/triggerRun';
+import { triggerRun, triggerRunMatrix } from '../lib/triggerRun';
 import { DEFAULT_MODULES, DEFAULT_TARGET, moduleOf } from '../lib/schema';
 import { useAuth } from '../context/AuthContext';
 import { useActiveViewers } from '../lib/usePresence';
 import StatusBadge from '../components/StatusBadge';
 import TargetBadge from '../components/TargetBadge';
 import TargetPicker from '../components/TargetPicker';
+import DataBadge from '../components/DataBadge';
 import Spinner from '../components/Spinner';
 import StepsEditor from '../components/StepsEditor';
+import TestDataEditor, { dataRunCount } from '../components/TestDataEditor';
 import ModuleCombobox from '../components/ModuleCombobox';
 import { timeAgo, fmtDuration } from '../lib/format';
 
@@ -31,6 +33,7 @@ function snapshot(test) {
     module: test.module || '',
     startUrl: test.startUrl || '',
     steps: test.steps || [],
+    data: test.data || null,
     status: test.status || 'active',
   };
 }
@@ -102,6 +105,12 @@ export default function TestDetail() {
 
   if (!test) return <Spinner label="Loading test…" />;
 
+  // Total runs a normal launch will create: data-variable combinations × browsers.
+  const perData = dataRunCount(test.data);
+  const totalRuns = perData * (targets.length || 1);
+  const runButtonLabel =
+    totalRuns > 1 ? `▶ Run ${totalRuns}×` : '▶ Run test';
+
   const update = (patch) => {
     if (locked) return; // someone else is editing this test — don't clobber
     setTest((t) => ({ ...t, ...patch }));
@@ -120,15 +129,16 @@ export default function TestDetail() {
     setRunning(true);
     try {
       // Partial runs (run-from / run-until) and baseline captures are tied to a
-      // single browser, so they use just the first selected target. A normal
-      // "Run test" fans out across every ticked browser/device.
+      // single browser and a single value, so they use just the first selected
+      // target and no data fan-out. A normal "Run test" fans out across every
+      // ticked browser/device AND every data-variable value.
       const single = opts.updateBaselines || Number.isInteger(opts.fromStep) || Number.isInteger(opts.toStep);
       const chosen = targets.length ? targets : [DEFAULT_TARGET];
       if (single) {
         const runId = await triggerRun(test, { ...opts, target: chosen[0] });
         navigate(`/runs/${runId}`);
       } else {
-        const runIds = await triggerRunTargets(test, chosen, opts);
+        const { runIds } = await triggerRunMatrix(test, chosen, opts);
         // Open the single run directly; for a matrix, go to the Runs list where
         // the batch shows together.
         navigate(runIds.length === 1 ? `/runs/${runIds[0]}` : '/runs');
@@ -271,11 +281,7 @@ export default function TestDetail() {
             <TargetPicker value={targets} onChange={setTargets} disabled={running} />
           </div>
           <button onClick={() => handleRun()} disabled={running} className="btn-primary">
-            {running
-              ? 'Starting…'
-              : targets.length > 1
-                ? `▶ Run on ${targets.length} browsers`
-                : '▶ Run test'}
+            {running ? 'Starting…' : runButtonLabel}
           </button>
           <div
             className="flex items-center justify-center gap-1.5 text-xs text-gray-400"
@@ -336,6 +342,10 @@ export default function TestDetail() {
             onRunFrom={(i) => handleRun({ fromStep: i })}
             onRunUntil={(i) => handleRun({ toStep: i })}
           />
+
+          <div className="mt-8">
+            <TestDataEditor value={test.data} onChange={(data) => update({ data })} />
+          </div>
         </section>
 
         {/* Run history */}
@@ -353,9 +363,10 @@ export default function TestDetail() {
                 className="group flex items-center justify-between px-3 py-2.5 hover:bg-ink-700/50"
               >
                 <Link to={`/runs/${r.id}`} className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <StatusBadge status={r.status} />
                     <TargetBadge target={r.target} />
+                    <DataBadge label={r.dataLabel} />
                   </div>
                   <div className="mt-1 text-xs text-gray-500">
                     {timeAgo(r.startedAt)} · {fmtDuration(r.durationMs)}

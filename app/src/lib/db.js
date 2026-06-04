@@ -48,6 +48,7 @@ export async function createTest(data) {
     module: data.module || '',
     startUrl: data.startUrl || '',
     steps: data.steps || [],
+    data: data.data || null,
     tags: data.tags || [],
     status: 'active',
     createdAt: serverTimestamp(),
@@ -130,6 +131,11 @@ export async function enqueueRun(test, triggeredBy, opts = {}) {
     // they share one batchId so the dashboard can group them.
     target: opts.target || 'chromium',
     batchId: opts.batchId || null,
+    // Data-driven testing: the variable values this run uses (e.g.
+    // { cells: { size: '24' } }) and a human label ("size=24"). Null for
+    // ordinary runs. The runner substitutes {{name}} tokens in step values.
+    dataRow: opts.dataRow || null,
+    dataLabel: opts.dataLabel || null,
     steps: [],
     durationMs: 0,
     browser: targetById(opts.target || 'chromium').engine,

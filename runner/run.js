@@ -32,6 +32,18 @@ function resolveTarget(id) {
   const device = t.device && devices[t.device] ? devices[t.device] : null;
   return { id: TARGETS[id] ? id : 'chromium', engine, device };
 }
+
+// Data-driven testing: replace {{name}} tokens in a step value with the value
+// for this run's data row. Tokens with no matching variable are left intact so
+// the playback layer can still resolve {{ENV_SECRET}} credentials. Applied to
+// the step values up front (these are test data, not secrets) so run labels and
+// the dashboard show the real value.
+function applyDataVars(value, cells) {
+  if (typeof value !== 'string' || !cells) return value;
+  return value.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (m, name) =>
+    Object.prototype.hasOwnProperty.call(cells, name) ? String(cells[name]) : m,
+  );
+}
 // Fraction of pixels that must differ before a step is flagged as a visual
 // change. Override with VISUAL_THRESHOLD (e.g. 0.02 = 2%).
 const VISUAL_THRESHOLD = Number(process.env.VISUAL_THRESHOLD) || 0.01;
@@ -238,12 +250,20 @@ async function executeRun(runId) {
     : sliced;
 
   // Expand any reusable-component steps into their underlying steps.
-  const effectiveSteps = await expandComponents(withSetup);
+  const expandedSteps = await expandComponents(withSetup);
+
+  // Data-driven run: substitute {{name}} tokens with this row's values.
+  const dataCells = run.dataRow?.cells || null;
+  const effectiveSteps = dataCells
+    ? expandedSteps.map((s) =>
+        typeof s.value === 'string' ? { ...s, value: applyDataVars(s.value, dataCells) } : s,
+      )
+    : expandedSteps;
   const effectiveTest = { ...test, steps: effectiveSteps };
 
   // Visual baselines are keyed by step index, which only lines up on a full
   // run with no prepended setup, so we skip visual comparison otherwise.
-  const updateBaselines = !!run.updateBaselines && !partial && !hasSetup;
+  const updateBaselines = !!run.updateBaselines && !partial && !hasSetup && !dataCells;
   await runRef.update({
     status: 'running',
     testName: test.name,
@@ -258,6 +278,7 @@ async function executeRun(runId) {
 
   const target = resolveTarget(run.target);
   console.log(`  target: ${target.id}${target.device ? ` (${run.target})` : ''}`);
+  if (run.dataLabel) console.log(`  data: ${run.dataLabel}`);
   const browser = await target.engine.launch();
   const artifactDir = path.join(os.tmpdir(), `run-${runId}`);
   await fs.mkdir(artifactDir, { recursive: true });
@@ -285,7 +306,7 @@ async function executeRun(runId) {
       try {
         const shot = await pg.screenshot({ fullPage: false });
         result.screenshotUrl = await uploadScreenshot(runId, index, shot);
-        if (!partial && !hasSetup) {
+        if (!partial && !hasSetup && !dataCells) {
           try {
             result.visual = await compareVisual({
               testId: test.id,

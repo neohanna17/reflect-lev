@@ -396,8 +396,55 @@ const SECTIONS = [
     ),
   },
   {
+    id: 'data-driven',
+    title: '9 · Test data — try several values in one click',
+    summary: 'Run a test once per value (e.g. font sizes 12, 24, 48).',
+    body: (
+      <>
+        <p>
+          Some fields already have a value you want to change — like the{' '}
+          <strong>Size</strong> field in settings. The trick is two steps:{' '}
+          <strong>Clear field</strong> (empties the box), then <strong>Type text</strong>{' '}
+          (enters the new value). If you skip the clear, you append to what’s already there
+          (typing <code>18</code> into a box that says <code>16</code> gives you{' '}
+          <code>1618</code>).
+        </p>
+        <p>
+          To try <em>several</em> values without copying the steps over and over, use the{' '}
+          <strong>Test data</strong> panel under the steps:
+        </p>
+        <ol>
+          <li>
+            Click <strong>+ Add variable</strong> and name it, e.g. <code>size</code>.
+          </li>
+          <li>
+            List the values you want to try, <strong>one per line</strong> (e.g.{' '}
+            <code>12</code>, <code>24</code>, <code>48</code>).
+          </li>
+          <li>
+            In your <strong>Type text</strong> step, put <code>{'{{size}}'}</code> as the
+            value instead of a fixed number.
+          </li>
+        </ol>
+        <p>
+          Now pressing <strong>Run</strong> launches the test <strong>once per value</strong>{' '}
+          — three runs for three sizes — each tagged with a 🧪 chip (e.g.{' '}
+          <strong>size=24</strong>) so you can tell them apart on the{' '}
+          <Link to="/runs">Runs</Link> list. Add a second variable (say <code>color</code>)
+          and it runs every combination.
+        </p>
+        <p className="tip">
+          <strong>Good to know.</strong> Data runs skip visual-baseline checks (different
+          values legitimately look different, so a diff would be meaningless). There’s a cap
+          of 25 runs per click — if your value lists multiply past that, trim them. And this
+          combines with cross-browser: pick 2 browsers × 3 sizes and you get 6 runs.
+        </p>
+      </>
+    ),
+  },
+  {
     id: 'results',
-    title: '9 · Read the results',
+    title: '10 · Read the results',
     summary: 'Video, trace, screenshots and self-heal notes.',
     body: (
       <>
@@ -439,7 +486,7 @@ const SECTIONS = [
   },
   {
     id: 'suites',
-    title: '10 · Suites &amp; scheduling',
+    title: '11 · Suites &amp; scheduling',
     summary: 'Group tests and run them automatically.',
     body: (
       <>
@@ -514,7 +561,7 @@ const SECTIONS = [
   },
   {
     id: 'reports',
-    title: '11 · Reports',
+    title: '12 · Reports',
     summary: 'Pass rates, flaky tests and trends.',
     body: (
       <>
@@ -530,7 +577,7 @@ const SECTIONS = [
   },
   {
     id: 'bugs',
-    title: '12 · File a Jira-ready bug',
+    title: '13 · File a Jira-ready bug',
     summary: 'Turn a failure into a ticket in two clicks.',
     body: (
       <>
