@@ -34,6 +34,7 @@ function snapshot(test) {
     startUrl: test.startUrl || '',
     steps: test.steps || [],
     data: test.data || null,
+    visualCheck: test.visualCheck ?? null,
     status: test.status || 'active',
   };
 }
@@ -304,6 +305,21 @@ export default function TestDetail() {
           >
             Set visual baseline
           </button>
+          <label
+            className="flex items-center justify-center gap-2 rounded-lg border border-ink-600 bg-white px-2 py-1.5 text-xs text-gray-600"
+            title="When on, runs compare each step's screenshot to its baseline and flag visual changes. Turn off to skip pixel diffing (just pass/fail)."
+          >
+            <input
+              type="checkbox"
+              checked={
+                test.visualCheck === true ||
+                (test.visualCheck !== false &&
+                  (!test.automation || test.tutorialSlug === '__tutorial_hub__'))
+              }
+              onChange={(e) => update({ visualCheck: e.target.checked })}
+            />
+            Watch for visual changes
+          </label>
           <button
             onClick={handleSaveAsComponent}
             className="btn-ghost text-xs"

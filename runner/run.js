@@ -327,9 +327,20 @@ async function executeRun(runId) {
     : expandedSteps;
   const effectiveTest = { ...test, steps: effectiveSteps };
 
+  // Whether to do visual-regression at all for this test. Pixel diffing is
+  // noisy on dynamic pages, so for automation runs we only watch the tutorial
+  // hub (where we genuinely want to catch new tutorials) — the other smoke
+  // checks just assert the page loads. A test can opt in/out explicitly with
+  // test.visualCheck. Manual (non-automation) tests keep visual checks on.
+  const visualWanted =
+    test.visualCheck === true ||
+    (test.visualCheck !== false &&
+      (!run.automation || test.tutorialSlug === '__tutorial_hub__'));
+
   // Visual baselines are keyed by step index, which only lines up on a full
   // run with no prepended setup, so we skip visual comparison otherwise.
-  const updateBaselines = !!run.updateBaselines && !partial && !hasSetup && !dataCells;
+  const updateBaselines =
+    !!run.updateBaselines && !partial && !hasSetup && !dataCells && visualWanted;
   await runRef.update({
     status: 'running',
     testName: test.name,
@@ -378,9 +389,18 @@ async function executeRun(runId) {
     const { status } = await runTest(page, effectiveTest, async (result, pg) => {
       const index = i;
       try {
-        const shot = await pg.screenshot({ fullPage: false });
+        // For visual-watched steps, let the page settle (network idle + web
+        // fonts) so a half-loaded frame isn't compared against the baseline —
+        // a big source of false "changes". Bounded so it never hangs the run.
+        if (visualWanted) {
+          await pg.waitForLoadState('networkidle', { timeout: 2500 }).catch(() => {});
+          await pg.evaluate(() => (document.fonts ? document.fonts.ready : null)).catch(() => {});
+        }
+        // animations:'disabled' freezes CSS animations/transitions and hides
+        // the text caret, so blinking cursors / spinners don't read as changes.
+        const shot = await pg.screenshot({ fullPage: false, animations: 'disabled' });
         result.screenshotUrl = await uploadScreenshot(runId, index, shot);
-        if (!partial && !hasSetup && !dataCells) {
+        if (!partial && !hasSetup && !dataCells && visualWanted) {
           try {
             result.visual = await compareVisual({
               testId: test.id,

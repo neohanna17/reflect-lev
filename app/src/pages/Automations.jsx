@@ -152,6 +152,9 @@ export default function Automations() {
           module: spec.module,
           automation: true,
           tutorialSlug: spec.slug,
+          // Only the tutorial-hub monitor watches for visual changes; the smoke
+          // checks just confirm the page loads (no noisy pixel diffing).
+          visualCheck: !!spec.hub,
           startUrl: ADMIN_BASE + spec.links[0].href,
           description: spec.hub
             ? 'Daily check that the admin Tutorial hub still loads when logged in. Set a visual baseline on this test so the morning run flags new tutorials/sections as a visual change.'

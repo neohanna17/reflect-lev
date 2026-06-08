@@ -55,6 +55,9 @@ export async function createTest(data) {
     // ties a generated test back to its admin-tutorial category for sync.
     automation: data.automation || false,
     tutorialSlug: data.tutorialSlug || null,
+    // Visual-change watching: true = always, false = never, null = default
+    // (on for manual tests + the tutorial hub, off for other automations).
+    visualCheck: data.visualCheck === undefined ? null : data.visualCheck,
     status: 'active',
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
