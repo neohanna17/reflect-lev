@@ -20,6 +20,21 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/members/$(request.auth.uid));
     }
 
+    // "Owner" = a member whose member doc has owner: true. Set this once in the
+    // Firebase console on your own members/{uid} doc. Gates owner-only actions.
+    function isOwner() {
+      return isMember()
+        && get(/databases/$(database)/documents/members/$(request.auth.uid)).data.owner == true;
+    }
+
+    // A reusable component whose name looks like a login flow (matches the
+    // app's isLoginComponentName: contains "log in"/"login"/"sign in"/"signin",
+    // optionally hyphenated). Deleting it would break every test that logs in.
+    function isLoginComponent() {
+      return resource.data.name is string
+        && resource.data.name.lower().matches('.*(log|sign)[ \\-]*in.*');
+    }
+
     // Membership directory. Read so the app can confirm access; managed by
     // admins in the console (or a trusted backend), never by clients.
     match /members/{uid} {
@@ -43,9 +58,12 @@ service cloud.firestore {
       allow read, create, update, delete: if isMember();
     }
 
-    // Reusable components = named step sequences shared across tests.
+    // Reusable components = named step sequences shared across tests. Any
+    // member can read/create/edit; but the Log in component may only be DELETED
+    // by an owner, so it can't be removed out from under every test.
     match /components/{componentId} {
-      allow read, create, update, delete: if isMember();
+      allow read, create, update: if isMember();
+      allow delete: if isMember() && (!isLoginComponent() || isOwner());
     }
 
     // Feature feedback = notes / requests members leave for the admin.

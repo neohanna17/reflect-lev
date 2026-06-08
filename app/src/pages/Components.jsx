@@ -7,6 +7,8 @@ import {
 } from '../lib/db';
 import Spinner from '../components/Spinner';
 import StepsEditor from '../components/StepsEditor';
+import { isLoginComponentName } from '../lib/schema';
+import { useAuth } from '../context/AuthContext';
 
 export default function Components() {
   const [components, setComponents] = useState(null);
@@ -56,8 +58,19 @@ export default function Components() {
 }
 
 function ComponentCard({ component, open, onToggle }) {
+  const { isOwner } = useAuth();
   const [name, setName] = useState(component.name);
   const [description, setDescription] = useState(component.description || '');
+
+  // The Log in component is protected: only the owner may delete it, so a stray
+  // click can't break every test (and every automation) that logs in.
+  const isLogin = isLoginComponentName(component.name);
+  const canDelete = !isLogin || isOwner;
+
+  async function handleDelete() {
+    if (!canDelete) return;
+    if (confirm(`Delete component "${component.name}"?`)) await deleteComponent(component.id);
+  }
 
   return (
     <div className="card overflow-hidden">
@@ -66,10 +79,24 @@ function ComponentCard({ component, open, onToggle }) {
           {open ? '▾' : '▸'}
         </button>
         <span className="flex-1 truncate font-medium">{component.name}</span>
+        {isLogin && (
+          <span
+            className="rounded-full bg-ink-700 px-2 py-0.5 text-xs text-gray-500"
+            title="Protected — only the owner can delete the Log in component"
+          >
+            🔒 protected
+          </span>
+        )}
         <span className="text-xs text-gray-500">{component.steps?.length || 0} steps</span>
         <button
-          onClick={() => confirm(`Delete component "${component.name}"?`) && deleteComponent(component.id)}
-          className="btn-danger py-1 px-2.5 text-xs"
+          onClick={handleDelete}
+          disabled={!canDelete}
+          className="btn-danger py-1 px-2.5 text-xs disabled:cursor-not-allowed disabled:opacity-40"
+          title={
+            canDelete
+              ? 'Delete this component'
+              : 'Only the owner can delete the Log in component'
+          }
         >
           Delete
         </button>

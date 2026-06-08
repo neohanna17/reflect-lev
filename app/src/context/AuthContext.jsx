@@ -21,6 +21,9 @@ export function AuthProvider({ children }) {
   const value = {
     user,
     member,
+    // True only for members whose member doc has owner: true. Gates owner-only
+    // actions like deleting the Log in reusable component.
+    isOwner: !!member?.owner,
     loading,
     login: () => signInWithPopup(auth, googleProvider),
     logout: () => signOut(auth),

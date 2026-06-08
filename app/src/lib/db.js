@@ -154,13 +154,17 @@ export async function enqueueRun(test, triggeredBy, opts = {}) {
 
 // ---- Membership ----
 
+// Returns the member document ({ uid, ...data }) when the signed-in user is a
+// member, otherwise null. The member doc may carry an `owner: true` flag used
+// to gate owner-only actions (e.g. deleting the Log in component). Truthiness
+// still answers "is a member?" for callers that only need the gate.
 export async function isMember(uid) {
-  if (!uid) return false;
+  if (!uid) return null;
   try {
     const snap = await getDoc(doc(db, 'members', uid));
-    return snap.exists();
+    return snap.exists() ? { uid, ...snap.data() } : null;
   } catch {
-    return false;
+    return null;
   }
 }
 
