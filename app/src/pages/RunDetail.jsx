@@ -15,6 +15,7 @@ export default function RunDetail() {
   const [run, setRun] = useState(undefined);
   const [shot, setShot] = useState(null);
   const [compare, setCompare] = useState(null); // { label, baselineUrl, currentUrl, diffUrl }
+  const [openSteps, setOpenSteps] = useState({}); // step index -> explicitly open/closed
   const [bugOpen, setBugOpen] = useState(false);
   const [rerunning, setRerunning] = useState(false);
   const [rebaselining, setRebaselining] = useState(false);
@@ -28,6 +29,12 @@ export default function RunDetail() {
   const pending = run.status === 'queued' || run.status === 'running';
   const failed = run.status === 'failed' || run.status === 'error';
   const changedSteps = (run.steps || []).filter((s) => s.visual?.status === 'changed');
+
+  // Steps expand to show details. Failed/errored steps default to open so the
+  // problem is visible immediately; the rest open on click.
+  const isStepOpen = (i, status) =>
+    openSteps[i] !== undefined ? openSteps[i] : status === 'failed' || status === 'error';
+  const toggleStep = (i, status) => setOpenSteps((m) => ({ ...m, [i]: !isStepOpen(i, status) }));
 
   // One-click "accept the new look": re-run capturing fresh visual baselines so
   // this change (if it's expected) stops being flagged. Same target as this run.
@@ -247,64 +254,118 @@ export default function RunDetail() {
         Steps
       </h2>
       <ol className="space-y-2" data-tour="run-steps">
-        {(run.steps || []).map((s, i) => (
-          <li key={s.stepId || i} className="card overflow-hidden">
-            <div className="flex items-center gap-3 px-4 py-3">
-              <StatusBadge status={s.status} />
-              <span className="flex-1 truncate text-sm">
-                {s.fromComponent && (
-                  <span className="mr-1 text-xs text-brand" title={`From component: ${s.fromComponent}`}>
-                    ↳ {s.fromComponent}:
+        {(run.steps || []).map((s, i) => {
+          const stepFailed = s.status === 'failed' || s.status === 'error';
+          const open = isStepOpen(i, s.status);
+          return (
+            <li
+              key={s.stepId || i}
+              className={`card overflow-hidden ${stepFailed ? 'ring-1 ring-red-500/30' : ''}`}
+            >
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => toggleStep(i, s.status)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggleStep(i, s.status);
+                  }
+                }}
+                className="flex cursor-pointer items-center gap-3 px-3 py-3 hover:bg-ink-700/30"
+              >
+                <span
+                  className={`grid h-6 w-6 shrink-0 place-items-center rounded-md text-xs font-semibold ${
+                    stepFailed ? 'bg-red-500/15 text-red-700' : 'bg-ink-700 text-gray-500'
+                  }`}
+                >
+                  {i + 1}
+                </span>
+                <StatusBadge status={s.status} />
+                <span className="flex-1 truncate text-sm">
+                  {s.fromComponent && (
+                    <span className="mr-1 text-xs text-brand" title={`From component: ${s.fromComponent}`}>
+                      ↳ {s.fromComponent}:
+                    </span>
+                  )}
+                  {s.label || s.type}
+                </span>
+                {s.visual?.status === 'changed' && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCompare({
+                        label: s.label || s.type,
+                        baselineUrl: s.visual.baselineUrl,
+                        currentUrl: s.screenshotUrl,
+                        diffUrl: s.visual.diffUrl,
+                        note: s.visual.note,
+                      });
+                    }}
+                    className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-700 hover:bg-amber-500/25"
+                    title={s.visual.note || 'Compare baseline vs current to see exactly what changed'}
+                  >
+                    ⚠ change {Math.round((s.visual.ratio || 0) * 100)}% · compare
+                  </button>
+                )}
+                {(s.visual?.status === 'baseline-created' || s.visual?.status === 'baseline-updated') && (
+                  <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs text-emerald-700">
+                    baseline {s.visual.status === 'baseline-updated' ? 'updated' : 'set'}
                   </span>
                 )}
-                {s.label || s.type}
-              </span>
-              {s.visual?.status === 'changed' && (
-                <button
-                  onClick={() =>
-                    setCompare({
-                      label: s.label || s.type,
-                      baselineUrl: s.visual.baselineUrl,
-                      currentUrl: s.screenshotUrl,
-                      diffUrl: s.visual.diffUrl,
-                      note: s.visual.note,
-                    })
-                  }
-                  className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-700 hover:bg-amber-500/25"
-                  title={s.visual.note || 'Compare baseline vs current to see exactly what changed'}
-                >
-                  ⚠ change {Math.round((s.visual.ratio || 0) * 100)}% · compare
-                </button>
-              )}
-              {(s.visual?.status === 'baseline-created' || s.visual?.status === 'baseline-updated') && (
-                <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs text-emerald-700">
-                  baseline {s.visual.status === 'baseline-updated' ? 'updated' : 'set'}
+                <span className="text-xs text-gray-500">{fmtDuration(s.durationMs)}</span>
+                {s.screenshotUrl && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShot(s.screenshotUrl);
+                    }}
+                    className="btn-ghost py-1 px-2 text-xs"
+                    title="View this step's screenshot"
+                  >
+                    📷
+                  </button>
+                )}
+                <span className={`shrink-0 text-gray-300 transition-transform ${open ? 'rotate-90' : ''}`}>
+                  ›
                 </span>
-              )}
-              <span className="text-xs text-gray-500">{fmtDuration(s.durationMs)}</span>
-              {s.screenshotUrl && (
-                <button
-                  onClick={() => setShot(s.screenshotUrl)}
-                  className="btn-ghost py-1 px-2 text-xs"
-                  title="View this step's screenshot"
-                >
-                  📷
-                </button>
-              )}
-            </div>
-            {s.message && s.status !== 'passed' && (
-              <pre className="border-t border-ink-600 bg-red-50 px-4 py-2 font-mono text-xs text-red-700 whitespace-pre-wrap">
-                {s.message}
-                {s.healedWith ? `\nself-healed via: ${s.healedWith}` : ''}
-              </pre>
-            )}
-            {s.healedWith && s.status === 'passed' && (
-              <div className="border-t border-ink-600 bg-amber-500/5 px-4 py-1.5 text-xs text-amber-700">
-                self-healed via: <code>{s.healedWith}</code>
               </div>
-            )}
-          </li>
-        ))}
+              {open && (
+                <div className="border-t border-ink-600">
+                  {stepFailed ? (
+                    <pre className="bg-red-50 px-4 py-2.5 font-mono text-xs text-red-700 whitespace-pre-wrap">
+                      {s.message || 'No error message was recorded for this step.'}
+                      {s.healedWith ? `\nself-healed via: ${s.healedWith}` : ''}
+                    </pre>
+                  ) : (
+                    <div className="flex flex-wrap items-center gap-2 px-4 py-2.5 text-xs text-gray-500">
+                      <span>
+                        {s.healedWith ? (
+                          <>
+                            self-healed via: <code>{s.healedWith}</code>
+                          </>
+                        ) : (
+                          'Passed — no issues.'
+                        )}
+                      </span>
+                      {s.screenshotUrl && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShot(s.screenshotUrl);
+                          }}
+                          className="text-brand hover:underline"
+                        >
+                          View screenshot
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </li>
+          );
+        })}
         {(!run.steps || run.steps.length === 0) && !pending && (
           <li className="card p-6 text-center text-sm text-gray-500">
             No step results recorded.
