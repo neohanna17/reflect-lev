@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { watchTests, watchRecentRuns, watchComponents, createTest } from '../lib/db';
+import { watchTests, watchRecentRuns, watchComponents, createTest, enqueueRun } from '../lib/db';
 import { triggerRun } from '../lib/triggerRun';
 import { useAuth } from '../context/AuthContext';
 import { cryptoId } from '../lib/schema';
@@ -191,19 +191,26 @@ export default function Automations() {
   }
 
   async function runAll() {
-    if (autoTests.length === 0) return;
-    if (!confirm(`Run all ${autoTests.length} automation test(s) now?`)) return;
+    const runnable = autoTests.filter((t) => (t.steps?.length || 0) > 0);
+    if (runnable.length === 0) return;
+    if (!confirm(`Run all ${runnable.length} automation test(s) now?`)) return;
     setBusy(true);
     setNote('');
     try {
-      let queued = 0;
-      for (const t of autoTests) {
-        if ((t.steps?.length || 0) === 0) continue;
-        await triggerRun(t, { automation: true });
-        queued += 1;
-        setNote(`Queued ${queued}/${autoTests.length}…`);
+      const who = user?.email || 'dashboard';
+      // Enqueue every run first WITHOUT dispatching, then fire a single workflow
+      // that drains the whole queue. Dispatching one workflow per run would hit
+      // GitHub's concurrency group, which cancels all-but-one pending job and
+      // strands the rest as "queued". One drain job works through them in order.
+      const [first, ...rest] = runnable;
+      for (let i = 0; i < rest.length; i += 1) {
+        await enqueueRun(rest[i], who, { automation: true });
+        setNote(`Queuing ${i + 1}/${runnable.length}…`);
       }
-      setNote(`✓ Queued ${queued} run${queued === 1 ? '' : 's'}. Watch the results below.`);
+      await triggerRun(first, { automation: true }); // dispatches; the runner drains the rest
+      setNote(
+        `✓ Queued ${runnable.length} run${runnable.length === 1 ? '' : 's'}. One runner is working through them — watch the results below.`,
+      );
     } catch (e) {
       alert(e.message);
     } finally {

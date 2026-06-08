@@ -448,10 +448,18 @@ async function drainQueue() {
   }
   const toMs = (t) => (t?.toMillis ? t.toMillis() : 0);
   const docs = snap.docs.sort((a, b) => toMs(a.data().startedAt) - toMs(b.data().startedAt));
-  console.log(`Draining ${docs.length} queued run(s)…`);
-  for (const doc of docs) {
-    await executeRun(doc.id);
-  }
+  const concurrency = Number(process.env.RUN_CONCURRENCY) || 3;
+  console.log(`Draining ${docs.length} queued run(s), ${concurrency} at a time…`);
+  let failures = 0;
+  await pool(
+    docs.map((d) => d.id),
+    concurrency,
+    async (id) => {
+      const outcome = await executeRun(id);
+      if (outcome === 'failed' || outcome === 'error') failures += 1;
+    },
+  );
+  if (failures > 0) process.exitCode = 1;
 }
 
 // Run `worker` over `items` with at most `size` in flight at once.
@@ -661,6 +669,10 @@ async function main() {
     const outcome = await executeRun(runId);
     // non-zero exit on failure so the GitHub Actions job reflects it
     if (outcome === 'failed' || outcome === 'error') process.exitCode = 1;
+    // A batch launch (Run all / suite / cross-browser) enqueues many runs, but
+    // GitHub's concurrency group cancels all-but-one pending dispatch — leaving
+    // the siblings stranded as "queued". Drain them here in the surviving job.
+    await drainQueue();
   } else if (process.env.RUN_ALL === '1') {
     await runAllActive();
   } else if (process.env.RUN_AUTOMATIONS === '1') {
